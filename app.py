@@ -1,4 +1,5 @@
 import os
+import urllib.request
 import streamlit as st
 from PIL import Image
 from html2image import Html2Image
@@ -10,6 +11,21 @@ st.set_page_config(
 )
 
 # -----------------------------------------------------------------------------
+# 初始化中文字型 (防止 Linux 雲端環境產生 □□□ 亂碼)
+# -----------------------------------------------------------------------------
+@st.cache_resource
+def setup_chinese_font():
+    font_path = "NotoSansTC-Regular.ttf"
+    if not os.path.exists(font_path):
+        try:
+            # 從開源專案下載思源黑體支援中文
+            url = "https://github.com/google/fonts/raw/main/ofl/notosanstc/NotoSansTC-Regular.ttf"
+            urllib.request.urlretrieve(url, font_path)
+        except Exception:
+            pass
+setup_chinese_font()
+
+# -----------------------------------------------------------------------------
 # 初始化 Session State
 # -----------------------------------------------------------------------------
 if "day1_text" not in st.session_state:
@@ -18,7 +34,7 @@ if "day2_text" not in st.session_state:
     st.session_state["day2_text"] = ""
 
 # -----------------------------------------------------------------------------
-# 解析與生成繪圖 HTML 的函式 (強制指定中文字型防亂碼，完整呈現第3區內容)
+# 解析與生成繪圖 HTML 的函式
 # -----------------------------------------------------------------------------
 def parse_text_to_cards(text):
     cards_html = ""
@@ -53,15 +69,18 @@ def generate_poster_html(sub_title, main_title, tag_left, tag_right, date1_title
     c19 = parse_text_to_cards(data1_text)
     c20 = parse_text_to_cards(data2_text)
 
-    # 強制加入微軟正黑體與 Noto Sans TC 防範中文變亂碼 (□□□)
     html_content = f"""<!DOCTYPE html>
 <html>
 <head>
 <meta charset="utf-8">
 <style>
+  @font-face {{
+    font-family: 'Noto Sans TC';
+    src: url('NotoSansTC-Regular.ttf');
+  }}
   body {{
     background-color: {bg_color};
-    font-family: "Microsoft JhengHei", "Noto Sans TC", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+    font-family: 'Noto Sans TC', sans-serif;
     color: #ffffff;
     margin: 0;
     padding: 35px 30px;
@@ -243,29 +262,27 @@ with st.expander("📋 點此查看/複製 AI 轉換指令"):
 
 st.markdown("---")
 
-# 3. 賽程資料編輯區 (將高度加大至 550px，確保整張圖的賽程能完整看到不用捲動)
+# 3. 賽程資料編輯區 (改為全寬大單欄，高度放大至 650px，確保超寬且一眼看全)
 st.header("📝 3. 賽程資料編輯區")
 st.info("💡 請將 AI 整理好的賽程文字直接貼入下方對應的日期欄位中（格式：時間 | 組別 | 選手）。")
 
-col_a, col_b = st.columns(2)
+date1_title = st.text_input("第一天日期說明", value="11月19日 (星期四)")
+data1_text = st.text_area(
+    "第一天賽程 (格式：時間 | 組別 | 選手)",
+    value=st.session_state["day1_text"],
+    height=650,  # 超寬超高，完美檢視整張圖
+    placeholder="例如：\n14:30 | 國小低年級 | 童羿勛\n14:30 | 國小低年級 | 朱家禾、吳家丞"
+)
 
-with col_a:
-    date1_title = st.text_input("第一天日期說明", value="11月19日 (星期四)")
-    data1_text = st.text_area(
-        "第一天賽程 (格式：時間 | 組別 | 選手)",
-        value=st.session_state["day1_text"],
-        height=550,  # 放大高度，讓整張圖的賽程看得到全部
-        placeholder="例如：\n14:30 | 國小低年級 | 童羿勛"
-    )
+st.markdown("---")
 
-with col_b:
-    date2_title = st.text_input("第二天日期說明 (若無可留空)", value="11月20日 (星期五)")
-    data2_text = st.text_area(
-        "第二天賽程 (格式：時間 | 組別 | 選手)",
-        value=st.session_state["day2_text"],
-        height=550,  # 放大高度，讓整張圖的賽程看得到全部
-        placeholder="例如：\n08:45 | 國小高年級男雙 | 許宸睿、曾楷翔"
-    )
+date2_title = st.text_input("第二天日期說明 (若無可留空)", value="11月20日 (星期五)")
+data2_text = st.text_area(
+    "第二天賽程 (格式：時間 | 組別 | 選手)",
+    value=st.session_state["day2_text"],
+    height=650,  # 超寬超高，完美檢視整張圖
+    placeholder="例如：\n08:45 | 國小高年級男雙 | 許宸睿、曾楷翔"
+)
 
 with st.expander("➕ 點此新增更多天數賽程 (若賽程超過兩天)"):
     extra_date_title = st.text_input("額外天數日期說明", value="11月21日 (星期六)")
@@ -278,7 +295,7 @@ with st.expander("➕ 點此新增更多天數賽程 (若賽程超過兩天)"):
 
 st.markdown("---")
 
-# 4. 即時預覽與圖片下載 (第4區完美對應第3區內容，無亂碼、無捲動軸)
+# 4. 即時預覽與圖片下載 (無捲動軸、字型完美防亂碼)
 st.header("🖼️ 4. 即時預覽與圖片下載")
 
 combined_day2_text = data2_text
@@ -299,8 +316,8 @@ poster_html = generate_poster_html(
     title_font_size=title_font_size
 )
 
-st.subheader("🌐 網頁即時渲染預覽 (完整呈現・防亂碼)")
-st.components.v1.html(poster_html, height=2000, scrolling=False)
+st.subheader("🌐 網頁即時渲染預覽 (全寬無亂碼優化)")
+st.components.v1.html(poster_html, height=2200, scrolling=False)
 
 st.subheader("📥 匯出為高解析 PNG 圖片")
 if st.button("🚀 產出 PNG 圖片檔案", type="primary"):
@@ -308,7 +325,7 @@ if st.button("🚀 產出 PNG 圖片檔案", type="primary"):
         try:
             output_img_path = "generated_schedule.png"
             hti = Html2Image(output_path='.')
-            hti.screenshot(html_str=poster_html, save_as=output_img_path, size=(1000, 2400))
+            hti.screenshot(html_str=poster_html, save_as=output_img_path, size=(1000, 2600))
             
             if os.path.exists(output_img_path):
                 st.image(output_img_path, caption="已產出圖檔預覽", use_container_width=True)
