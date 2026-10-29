@@ -1,14 +1,7 @@
 import os
-import re
 import streamlit as st
 from PIL import Image
 from html2image import Html2Image
-
-try:
-    import pytesseract
-    HAS_TESSERACT = True
-except ImportError:
-    HAS_TESSERACT = False
 
 st.set_page_config(
     page_title="羽球隊賽程圖片產生器",
@@ -17,7 +10,7 @@ st.set_page_config(
 )
 
 # -----------------------------------------------------------------------------
-# 初始化 Session State (保持絕對乾淨，不預設任何寫死名單)
+# 初始化 Session State
 # -----------------------------------------------------------------------------
 if "day1_text" not in st.session_state:
     st.session_state["day1_text"] = ""
@@ -25,79 +18,7 @@ if "day2_text" not in st.session_state:
     st.session_state["day2_text"] = ""
 
 # -----------------------------------------------------------------------------
-# 動態解析上傳圖片表格的函式（完全依據上傳的圖檔內容進行欄位抓取與過濾）
-# -----------------------------------------------------------------------------
-def dynamic_parse_table_image(uploaded_files, target_team):
-    """
-    動態讀取上傳的圖片格線與文字，
-    依據 target_team（副標題/隊伍名稱）過濾出該隊伍選手，
-    並轉譯為「時間 | 組別 | 選手」格式。
-    """
-    if not uploaded_files:
-        st.warning("請先上傳賽程圖片！")
-        return
-
-    extracted_day1 = []
-    extracted_day2 = []
-
-    for file in uploaded_files:
-        try:
-            img = Image.open(file)
-            filename = file.name.lower()
-            
-            raw_text = ""
-            if HAS_TESSERACT:
-                # 若雲端/本機支援 Tesseract，進行真實 OCR 掃描
-                raw_text = pytesseract.image_to_string(img, lang="chi_tra+eng")
-            else:
-                # 若無安裝 Tesseract 核心，提醒使用者並保持動態解析介面暢通
-                st.info(f"💡 正在分析圖片：{file.name}。伺服器未安裝 OCR 核心時，請直接在下方編輯區對照圖片輸入或貼上。")
-                continue
-
-            # 依據表格列進行智慧過濾：只抓取包含 target_team 的行
-            lines = raw_text.split("\n")
-            for line in lines:
-                line = line.strip()
-                if not line or target_team not in line:
-                    continue
-                
-                # 抓取時間 (例如 2026-11-19 14:30:00 轉為 14:30 或保留完整時間)
-                time_match = re.search(r'(\d{2}:\d{2})', line)
-                time_str = time_match.group(1) if time_match else ""
-                
-                # 抓取組別 (例如 國小低年級男單A2-A3)
-                cate_match = re.search(r'(國小[\w\d\-\(\)]+)', line)
-                cate_str = cate_match.group(1) if cate_match else "賽事組別"
-                
-                if time_str:
-                    # 排除時間、標籤、與目標隊伍名稱後，剩下的即為選手
-                    parts = [p.strip() for p in line.split() if p.strip()]
-                    players = [p for p in parts if p != time_str and p != cate_str and "2026" not in p and target_team not in p and "預賽" not in p]
-                    players_str = "、".join(players) if players else target_team + "選手"
-                    
-                    row_result = f"{time_str} | {cate_str} | {players_str}"
-                    
-                    # 依日期分類
-                    if "19" in filename or "day1" in filename or "11-19" in line:
-                        extracted_day1.append(row_result)
-                    else:
-                        extracted_day2.append(row_result)
-
-        except Exception as e:
-            st.error(f"解析圖片 {file.name} 發生錯誤: {e}")
-
-    if extracted_day1:
-        st.session_state["day1_text"] = "\n".join(extracted_day1)
-    if extracted_day2:
-        st.session_state["day2_text"] = "\n".join(extracted_day2)
-    
-    if extracted_day1 or extracted_day2:
-        st.success(f"🎉 成功從圖片中過濾並萃取出「{target_team}」的賽程資料！")
-    else:
-        st.warning(f"⚠️ 在上傳的圖片中未自動檢測到包含「{target_team}」的文字，請手動在下方編輯區調整或對照輸入。")
-
-# -----------------------------------------------------------------------------
-# 解析與生成繪圖 HTML 的函式 (寬版優化 960px，不需左右滑動)
+# 解析與生成繪圖 HTML 的函式 (支援自訂背景色與字型大小)
 # -----------------------------------------------------------------------------
 def parse_text_to_cards(text):
     cards_html = ""
@@ -128,17 +49,18 @@ def parse_text_to_cards(text):
             """
     return cards_html
 
-def generate_poster_html(sub_title, main_title, tag_left, tag_right, date1_title, data1_text, date2_title, data2_text, item_font_size=16):
+def generate_poster_html(sub_title, main_title, tag_left, tag_right, date1_title, data1_text, date2_title, data2_text, item_font_size=16, bg_color="#0d1b2a", title_font_size=38):
     c19 = parse_text_to_cards(data1_text)
     c20 = parse_text_to_cards(data2_text)
 
+    # 動態計算高度或使用足夠寬敞的版型，避免內部捲動
     html_content = f"""<!DOCTYPE html>
 <html>
 <head>
 <meta charset="utf-8">
 <style>
   body {{
-    background-color: #0d1b2a;
+    background-color: {bg_color};
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans TC", sans-serif;
     color: #ffffff;
     margin: 0;
@@ -164,7 +86,7 @@ def generate_poster_html(sub_title, main_title, tag_left, tag_right, date1_title
     font-weight: 600;
   }}
   .main-title {{
-    font-size: 38px;
+    font-size: {title_font_size}px;
     font-weight: 800;
     margin: 8px 0 14px 0;
     color: #ffffff;
@@ -274,10 +196,10 @@ def generate_poster_html(sub_title, main_title, tag_left, tag_right, date1_title
 # Streamlit 主畫面佈局
 # -----------------------------------------------------------------------------
 st.title("🏸 羽球隊賽程圖片產生器")
-st.write("請依序完成設定、上傳賽程圖片，系統將自動比對副標題的隊伍名稱進行動態萃取。")
+st.write("請依照下方步驟，將賽程圖片轉為文字後貼入編輯區，即可即時產出海報。")
 
-# 1. 標題與版型設定
-st.header("⚙️ 1. 標題與版型設定")
+# 1. 標題、版型與樣式設定
+st.header("⚙️ 1. 標題、版型與樣式設定")
 col_s1, col_s2 = st.columns(2)
 with col_s1:
     main_title = st.text_input("主標題", value="整體流程表")
@@ -286,40 +208,46 @@ with col_s2:
     sub_title = st.text_input("副標題 / 隊伍名稱", value="2026年會稽國小羽球隊賽程表")
     tag_right = st.text_input("右側標籤 (日期)", value="日期：2026/11/19-20")
 
-item_font_size = st.slider("選手名字字體大小 (px)", min_value=12, max_value=24, value=16)
+# 新增背景色與字型大小自訂選項
+col_c1, col_c2, col_c3 = st.columns(3)
+with col_c1:
+    bg_color_option = st.selectbox(
+        "海報背景主題", 
+        ["經典深藍 (#0d1b2a)", "質感墨黑 (#111111)", "沉穩深灰 (#1e293b)", "運動深綠 (#064e3b)"]
+    )
+    # 對應色彩代碼
+    bg_color_map = {
+        "經典深藍 (#0d1b2a)": "#0d1b2a",
+        "質感墨黑 (#111111)": "#111111",
+        "沉穩深灰 (#1e293b)": "#1e293b",
+        "運動深綠 (#064e3b)": "#064e3b"
+    }
+    selected_bg = bg_color_map[bg_color_option]
+
+with col_c2:
+    item_font_size = st.slider("選手名字字體大小 (px)", min_value=12, max_value=24, value=16)
+
+with col_c3:
+    title_font_size = st.slider("主標題字體大小 (px)", min_value=28, max_value=48, value=38)
 
 st.markdown("---")
 
-# 2. 上傳多張賽程參考圖片
-st.header("📷 2. 上傳多張賽程參考圖片與自動判讀")
-uploaded_files = st.file_uploader("選擇多張賽程圖片檔...", type=["jpg", "jpeg", "png"], accept_multiple_files=True)
+# 2. 賽程圖片轉文字指引與指令
+st.header("📷 2. 賽程圖片轉文字指引")
+st.info("💡 **操作說明**：請將賽程截圖提供給 AI，並使用下方指定的提示詞，將結果直接複製貼到第 3 區的編輯格中。")
 
-if uploaded_files:
-    with st.expander("👁️ 檢視上傳的圖片清單"):
-        for i, file in enumerate(uploaded_files):
-            st.image(file, caption=f"圖 {i+1}: {file.name}", use_container_width=True)
-            
-    if st.button("🚀 執行圖片動態分析與過濾", type="primary"):
-        with st.spinner("正在掃描圖片表格並過濾指定隊伍..."):
-            # 從副標題自動擷取隊伍名稱（例如「會稽國小」）
-            target_team = "會稽國小"
-            if "會稽" in sub_title:
-                target_team = "會稽國小"
-            elif sub_title.strip():
-                target_team = sub_title.replace("年", "").replace("羽球隊", "").replace("賽程表", "").strip()
-                
-            dynamic_parse_table_image(uploaded_files, target_team=target_team)
-            st.rerun()
-else:
-    if not st.session_state.get("manual_edited", False):
-        st.session_state["day1_text"] = ""
-        st.session_state["day2_text"] = ""
+ai_prompt_text = f"""請將這張圖改成可直接複製到網頁的格式(包含斷行)，選手僅帶出{sub_title.replace('賽程表', '').replace('隊', '')}的即可，單打項目的組別名稱請去掉「男單」、「女單」（例如：國小五年級男單改為國小五年級）。
+日期
+時間 | 組別 | 選手"""
+
+with st.expander("📋 點此查看/複製 AI 轉換指令"):
+    st.code(ai_prompt_text, language="text")
 
 st.markdown("---")
 
-# 3. 賽程資料編輯區 (絕對不預設任何名單，完全依圖判讀或手動輸入)
-st.header("📝 3. 賽程資料編輯區 (可自由修改錯字與組別)")
-st.info("💡 提示：系統會依照上方副標題的隊伍名稱自動掃描圖片，您也可直接在此手動修改或貼上。")
+# 3. 賽程資料編輯區
+st.header("📝 3. 賽程資料編輯區")
+st.info("💡 請將 AI 整理好的賽程文字直接貼入下方對應的日期欄位中（格式：時間 | 組別 | 選手）。")
 
 col_a, col_b = st.columns(2)
 
@@ -329,7 +257,7 @@ with col_a:
         "第一天賽程 (格式：時間 | 組別 | 選手)",
         value=st.session_state["day1_text"],
         height=300,
-        placeholder="尚未載入或無資料，請上傳圖片後點擊上方按鈕..."
+        placeholder="例如：\n14:30 | 國小低年級 | 童羿勛\n14:30 | 國小低年級 | 朱家禾、吳家丞"
     )
 
 with col_b:
@@ -338,7 +266,7 @@ with col_b:
         "第二天賽程 (格式：時間 | 組別 | 選手)",
         value=st.session_state["day2_text"],
         height=300,
-        placeholder="尚未載入或無資料，請上傳圖片後點擊上方按鈕..."
+        placeholder="例如：\n08:45 | 國小高年級男雙 | 許宸睿、曾楷翔"
     )
 
 with st.expander("➕ 點此新增更多天數賽程 (若賽程超過兩天)"):
@@ -352,7 +280,7 @@ with st.expander("➕ 點此新增更多天數賽程 (若賽程超過兩天)"):
 
 st.markdown("---")
 
-# 4. 即時預覽與圖片下載 (寬版優化 960px，不需左右滑動)
+# 4. 即時預覽與圖片下載 (取消 scroll bar，設定高彈性高度且 scolling=False)
 st.header("🖼️ 4. 即時預覽與圖片下載")
 
 combined_day2_text = data2_text
@@ -368,19 +296,22 @@ poster_html = generate_poster_html(
     data1_text=data1_text,
     date2_title=date2_title,
     data2_text=combined_day2_text,
-    item_font_size=item_font_size
+    item_font_size=item_font_size,
+    bg_color=selected_bg,
+    title_font_size=title_font_size
 )
 
-st.subheader("🌐 網頁即時渲染預覽 (寬版優化)")
-st.components.v1.html(poster_html, height=900, scrolling=True)
+st.subheader("🌐 網頁即時渲染預覽 (無捲動軸優化)")
+# 將 scrolling 設為 False，並給予足夠展開的高度 (例如 1800px)，徹底消滅內嵌捲動軸
+st.components.v1.html(poster_html, height=1800, scrolling=False)
 
 st.subheader("📥 匯出為高解析 PNG 圖片")
-if st.button("🚀 產出 PNG 圖片檔案", type="secondary"):
+if st.button("🚀 產出 PNG 圖片檔案", type="primary"):
     with st.spinner("正在轉換為高解析圖片..."):
         try:
             output_img_path = "generated_schedule.png"
             hti = Html2Image(output_path='.')
-            hti.screenshot(html_str=poster_html, save_as=output_img_path, size=(1000, 1800))
+            hti.screenshot(html_str=poster_html, save_as=output_img_path, size=(1000, 2200))
             
             if os.path.exists(output_img_path):
                 st.image(output_img_path, caption="已產出圖檔預覽", use_container_width=True)
