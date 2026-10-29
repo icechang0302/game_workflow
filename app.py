@@ -352,4 +352,12 @@ if st.button("🚀 產出 PNG 圖片檔案", type="primary"):
             
             if os.path.exists(output_img_path):
                 st.image(output_img_path, caption="已產出圖檔預覽", use_container_width=True)
-                with open(output_
+                with open(output_img_path, "rb") as file:
+                    st.download_button(
+                        label="⬇️ 點此下載圖檔 (PNG)",
+                        data=file,
+                        file_name=f"{main_title}_賽程表.png",
+                        mime="image/png"
+                    )
+        except Exception as e:
+            st.error(f"圖片產出失敗：{e}")
