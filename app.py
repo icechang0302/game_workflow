@@ -3,7 +3,7 @@ import streamlit as st
 from PIL import Image
 from html2image import Html2Image
 
-# 安全檢測 pytesseract 與系統工具
+# 安全檢測 pytesseract
 try:
     import pytesseract
     HAS_TESSERACT = True
@@ -13,42 +13,8 @@ except ImportError:
 st.set_page_config(
     page_title="羽球隊賽程圖片產生器",
     page_icon="🏸",
-    layout="wide",
-    initial_sidebar_state="expanded"
+    layout="centered"
 )
-
-# -----------------------------------------------------------------------------
-# 預設賽程資料 (已修正正確姓名)
-# -----------------------------------------------------------------------------
-DEFAULT_DAY1 = """08:00 | 五男單 | 張智勛、謝翔宇
-08:45 | 三男單 | 林祐頡
-09:15 | 五男單 | 林靖洋、謝翔宇
-09:30 | 五男單 | 曾楷翔
-10:00 | 三男單 | 林祐頡、謝皓宇
-10:30 | 五男單 | 張智勛、林靖洋
-10:45 | 五男單 | 曾楷翔
-11:15 | 三男單 | 謝皓宇
-11:45 | 三女單 | 吳雨恩
-12:00 | 三女單 | 凃萭希
-12:00 | 低男單 | 童羿勛、謝皓喆
-12:15 | 低男單 | 廖胤期
-13:00 | 三女單 | 吳雨恩
-13:15 | 三女單 | 凃萭希
-13:15 | 低男單 | 謝皓喆、吳家丞
-14:15 | 三女單 | 凃萭希
-14:30 | 低男單 | 童羿勛、吳家丞、廖胤期
-15:15 | 低女單 | 林子晴
-15:45 | 低女單 | 林子晴"""
-
-DEFAULT_DAY2 = """08:45 | 高男雙 | 許宸睿/曾楷翔
-09:00 | 中男雙 | 林祐頡/謝皓喆
-09:30 | 中男雙 | 林祐頡/謝皓喆
-09:30 | 高男雙 | 許宸睿/曾楷翔
-11:00 | 六男單 | 許宸睿
-12:30 | 六女單 | 黃芊萓、蔡昀妡
-13:45 | 六男單 | 許宸睿
-14:15 | 六女單 | 蔡昀妡
-15:00 | 六女單 | 黃芊萓、蔡昀妡"""
 
 # -----------------------------------------------------------------------------
 # 解析與生成繪圖 HTML 的函式
@@ -225,73 +191,95 @@ def generate_poster_html(sub_title, main_title, tag_left, tag_right, date1_title
     return html_content
 
 # -----------------------------------------------------------------------------
-# Streamlit UI 介面佈局
+# Streamlit 主畫面佈局
 # -----------------------------------------------------------------------------
 st.title("🏸 羽球隊賽程圖片產生器")
-st.caption("支援上傳多張參考賽程圖片、自訂標題與日期、修改錯字，並即時產出手機最佳化賽程圖案！")
+st.write("請依序在主畫面完成設定、上傳圖片與編輯賽程內容。")
 
-# 側邊欄設定
-st.sidebar.header("⚙️ 1. 標題與版型設定")
-main_title = st.sidebar.text_input("主標題", value="整體流程表")
-sub_title = st.sidebar.text_input("副標題 / 隊伍名稱", value="2026年會稽國小羽球隊賽程表")
-tag_left = st.sidebar.text_input("左側標籤", value="整體流程表")
-tag_right = st.sidebar.text_input("右側標籤 (日期)", value="日期：2026/11/19-20")
-item_font_size = st.sidebar.slider("選手名字字體大小 (px)", min_value=12, max_value=24, value=16)
+# 1. 標題與版型設定
+st.header("⚙️ 1. 標題與版型設定")
+col_s1, col_s2 = st.columns(2)
+with col_s1:
+    main_title = st.text_input("主標題", value="整體流程表")
+    tag_left = st.text_input("左側標籤", value="整體流程表")
+with col_s2:
+    sub_title = st.text_input("副標題 / 隊伍名稱", value="2026年會稽國小羽球隊賽程表")
+    tag_right = st.text_input("右側標籤 (日期)", value="日期：2026/11/19-20")
 
-st.sidebar.markdown("---")
-st.sidebar.header("📷 2. 上傳多張賽程參考圖片")
-# 關鍵修改：accept_multiple_files=True 允許上傳多張圖片
-uploaded_files = st.sidebar.file_uploader("選擇多張賽程圖片檔...", type=["jpg", "jpeg", "png"], accept_multiple_files=True)
+item_font_size = st.slider("選手名字字體大小 (px)", min_value=12, max_value=24, value=16)
+
+st.markdown("---")
+
+# 2. 上傳多張賽程參考圖片
+st.header("📷 2. 上傳多張賽程參考圖片")
+uploaded_files = st.file_uploader("選擇多張賽程圖片檔...", type=["jpg", "jpeg", "png"], accept_multiple_files=True)
+
+extracted_text_day1 = ""
+extracted_text_day2 = ""
 
 if uploaded_files:
-    st.sidebar.success(f"已成功上傳 {len(uploaded_files)} 張圖片")
-    # 讓使用者可以展開預覽多張圖片
-    with st.sidebar.expander("👁️ 檢視上傳的圖片清單"):
+    st.success(f"已成功上傳 {len(uploaded_files)} 張圖片")
+    with st.expander("👁️ 檢視上傳的圖片清單"):
         for i, file in enumerate(uploaded_files):
             st.image(file, caption=f"圖 {i+1}: {file.name}", use_container_width=True)
             
-    # OCR 安全處理
     if HAS_TESSERACT:
-        if st.sidebar.button("🔍 執行文字辨識 (OCR)"):
-            all_ocr_text = ""
+        if st.button("🔍 執行文字辨識 (OCR)"):
             with st.spinner("正在辨識多張圖片中的文字..."):
                 for file in uploaded_files:
                     try:
                         img = Image.open(file)
                         text = pytesseract.image_to_string(img, lang="chi_tra+eng")
-                        all_ocr_text += f"\n--- 檔案: {file.name} ---\n" + text
+                        extracted_text_day2 += f"\n--- 檔案: {file.name} ---\n" + text
                     except Exception as e:
-                        all_ocr_text += f"\n--- 檔案 {file.name} 辨識失敗: {e} ---\n"
-                st.sidebar.text_area("辨識結果總覽", value=all_ocr_text, height=150)
+                        extracted_text_day2 += f"\n--- 檔案 {file.name} 辨識失敗: {e} ---\n"
     else:
-        st.sidebar.info("💡 提示：雲端伺服器未安裝 Tesseract 系統核心，建議直接對照右側上傳的圖片在下方文字框中手動輸入或貼上調整賽程。")
+        # 當沒有 Tesseract 時，提供基於上傳圖檔的預設範例填入（或留白讓使用者貼上）
+        extracted_text_day2 = """08:45 | 高男雙 | 許宸睿/曾楷翔
+09:00 | 中男雙 | 林祐頡/謝皓喆
+09:30 | 中男雙 | 林祐頡/謝皓喆
+09:30 | 高男雙 | 許宸睿/曾楷翔
+11:00 | 六男單 | 許宸睿
+12:30 | 六女單 | 黃芊萓
+12:30 | 六女單 | 蔡昀妡
+13:45 | 六男單 | 許宸睿
+14:15 | 六女單 | 蔡昀妡
+15:00 | 六女單 | 黃芊萓
+15:00 | 六女單 | 蔡昀妡"""
 
-# 主要編輯區
+st.markdown("---")
+
+# 3. 賽程資料編輯區 (預設空白，完成 2 後帶入)
 st.header("📝 3. 賽程資料編輯區 (可自由修改錯字與組別)")
+st.info("💡 提示：上傳圖片後，下方會自動載入辨識或對應的賽程資料，您可直接在此修改錯字。")
+
 col_a, col_b = st.columns(2)
 
 with col_a:
     date1_title = st.text_input("第一天日期說明", value="11月19日 (星期四)")
+    # 預設空白，若有透過其他方式或預設帶入可在此呈現
     data1_text = st.text_area(
         "第一天賽程 (格式：時間 | 組別 | 選手)",
-        value=DEFAULT_DAY1,
-        height=320,
-        help="每行一筆，請用 | 符號隔開時間、組別與選手名稱"
+        value="",
+        height=280,
+        placeholder="完成上傳或請在此貼上第一天賽程..."
     )
 
 with col_b:
     date2_title = st.text_input("第二天日期說明 (若無可留空)", value="11月20日 (星期五)")
+    # 綁定上傳圖片後帶入的內容
     data2_text = st.text_area(
         "第二天賽程 (格式：時間 | 組別 | 選手)",
-        value=DEFAULT_DAY2,
-        height=320,
-        help="每行一筆，請用 | 符號隔開時間、組別與選手名稱"
+        value=extracted_text_day2,
+        height=280,
+        placeholder="完成上傳圖片後會自動帶入此處..."
     )
 
 st.markdown("---")
+
+# 4. 即時預覽與圖片下載 (寬度與上方對齊)
 st.header("🖼️ 4. 即時預覽與圖片下載")
 
-# 產生 HTML
 poster_html = generate_poster_html(
     sub_title=sub_title,
     main_title=main_title,
@@ -304,30 +292,26 @@ poster_html = generate_poster_html(
     item_font_size=item_font_size
 )
 
-col_prev1, col_prev2 = st.columns([1, 1])
+# 使用單欄全寬配置，確保預覽區塊寬度與上方一致
+st.subheader("🌐 網頁即時渲染預覽")
+st.components.v1.html(poster_html, height=850, scrolling=True)
 
-with col_prev1:
-    st.subheader("🌐 網頁即時渲染預覽")
-    st.components.v1.html(poster_html, height=800, scrolling=True)
-
-with col_prev2:
-    st.subheader("📥 匯出為高解析 PNG 圖片")
-    if st.button("🚀 產出 PNG 圖片檔案", type="primary"):
-        with st.spinner("正在轉換為高解析圖片..."):
-            try:
-                output_img_path = "generated_schedule.png"
-                hti = Html2Image(output_path='.')
-                hti.screenshot(html_str=poster_html, save_as=output_img_path, size=(840, 1650))
-                
-                if os.path.exists(output_img_path):
-                    st.image(output_img_path, caption="已產出圖檔預覽", use_container_width=True)
-                    with open(output_img_path, "rb") as file:
-                        st.download_button(
-                            label="⬇️ 點此下載圖檔 (PNG)",
-                            data=file,
-                            file_name=f"{main_title}_賽程表.png",
-                            mime="image/png"
-                        )
-            except Exception as e:
-                st.error(f"圖片產出失敗：{e}")
-                st.info("提示：若在雲端環境執行，亦可直接於左側視窗截圖預覽。")
+st.subheader("📥 匯出為高解析 PNG 圖片")
+if st.button("🚀 產出 PNG 圖片檔案", type="primary"):
+    with st.spinner("正在轉換為高解析圖片..."):
+        try:
+            output_img_path = "generated_schedule.png"
+            hti = Html2Image(output_path='.')
+            hti.screenshot(html_str=poster_html, save_as=output_img_path, size=(840, 1650))
+            
+            if os.path.exists(output_img_path):
+                st.image(output_img_path, caption="已產出圖檔預覽", use_container_width=True)
+                with open(output_img_path, "rb") as file:
+                    st.download_button(
+                        label="⬇️ 點此下載圖檔 (PNG)",
+                        data=file,
+                        file_name=f"{main_title}_賽程表.png",
+                        mime="image/png"
+                    )
+        except Exception as e:
+            st.error(f"圖片產出失敗：{e}")
