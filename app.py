@@ -10,58 +10,12 @@ st.set_page_config(
 )
 
 # -----------------------------------------------------------------------------
-# 初始化 Session State
+# 初始化 Session State (絕對不預設任何名單內容)
 # -----------------------------------------------------------------------------
 if "day1_text" not in st.session_state:
     st.session_state["day1_text"] = ""
 if "day2_text" not in st.session_state:
     st.session_state["day2_text"] = ""
-
-# -----------------------------------------------------------------------------
-# 智慧影像分析與過濾函式：自動從上傳圖片中萃取目標隊伍並轉譯格式
-# -----------------------------------------------------------------------------
-def smart_extract_schedule(uploaded_files, target_team="會稽國小"):
-    """
-    不依賴外部 Tesseract 核心，透過內建智慧影像與結構解析，
-    自動抓取上傳圖片中包含目標隊伍的賽程，
-    並嚴格轉譯為「時間 | 組別 | 選手」格式。
-    """
-    if not uploaded_files:
-        st.session_state["day1_text"] = ""
-        st.session_state["day2_text"] = ""
-        return
-
-    day1_lines = []
-    day2_lines = []
-
-    for file in uploaded_files:
-        filename_lower = file.name.lower()
-        
-        # 模擬並解析上傳的截圖表格內容（對應您上傳的會稽國小賽程表結構）
-        # 系統會自動辨識並過濾出目標隊伍選手
-        if "19" in filename_lower or "day1" in filename_lower or "截圖" in filename_lower:
-            day1_lines.append("14:30 | 國小低年級男單A2-A3 | 童羿勛")
-            day1_lines.append("14:30 | 國小低年級男單D2-D3 | 吳家丞")
-            day1_lines.append("14:30 | 國小低年級男單F2-F3 | 廖胤期")
-            day1_lines.append("15:15 | 國小低年級女單C1-C3 | 林子晴")
-            day1_lines.append("15:45 | 國小低年級女單C2-C3 | 林子晴")
-        else:
-            day2_lines.append("08:45 | 國小高年級男雙N1-N3 | 許宸睿、曾楷翔")
-            day2_lines.append("09:00 | 國小中年級男雙B1-B3 | 林祐頡、謝皓喆")
-            day2_lines.append("09:30 | 國小中年級男雙B2-B3 | 林祐頡、謝皓喆")
-            day2_lines.append("09:30 | 國小高年級男雙N2-N3 | 許宸睿、曾楷翔")
-            day2_lines.append("11:00 | 國小六年級男單AA1-AA2 | 許宸睿")
-            day2_lines.append("12:30 | 國小六年級女單D1-D2 | 黃芊萓")
-            day2_lines.append("12:30 | 國小六年級女單K1-K2 | 蔡昀妡")
-            day2_lines.append("13:45 | 國小六年級男單AA2-AA3 | 許宸睿")
-            day2_lines.append("14:15 | 國小六年級女單K1-K4 | 蔡昀妡")
-            day2_lines.append("15:00 | 國小六年級女單D2-D3 | 黃芊萓")
-            day2_lines.append("15:00 | 國小六年級女單K1-K3 | 蔡昀妡")
-
-    if day1_lines:
-        st.session_state["day1_text"] = "\n".join(day1_lines)
-    if day2_lines:
-        st.session_state["day2_text"] = "\n".join(day2_lines)
 
 # -----------------------------------------------------------------------------
 # 解析與生成繪圖 HTML 的函式
@@ -241,7 +195,7 @@ def generate_poster_html(sub_title, main_title, tag_left, tag_right, date1_title
 # Streamlit 主畫面佈局
 # -----------------------------------------------------------------------------
 st.title("🏸 羽球隊賽程圖片產生器")
-st.write("請上傳賽程圖片，系統將自動判讀並將選手資料帶入下方編輯區。")
+st.write("請在主畫面設定標題、上傳賽程圖片以供對照，並在下方編輯區輸入賽程。")
 
 # 1. 標題與版型設定
 st.header("⚙️ 1. 標題與版型設定")
@@ -259,17 +213,10 @@ st.markdown("---")
 
 # 2. 上傳多張賽程參考圖片
 st.header("📷 2. 上傳多張賽程參考圖片")
-uploaded_files = st.file_uploader("選擇多張賽程圖片檔...", type=["jpg", "jpeg", "png"], accept_multiple_files=True)
+uploaded_files = st.file_uploader("選擇多張賽程圖片檔供對照...", type=["jpg", "jpeg", "png"], accept_multiple_files=True)
 
-# 當有上傳圖片時，立即觸發智慧分析並自動填入 Session State
 if uploaded_files:
-    target_team = "會稽國小"
-    if "會稽" in sub_title:
-        target_team = "會稽國小"
-    
-    smart_extract_schedule(uploaded_files, target_team=target_team)
-    st.success(f"已成功上傳 {len(uploaded_files)} 張圖片，已自動完成圖檔判讀並帶入下方編輯區！")
-    
+    st.success(f"已成功上傳 {len(uploaded_files)} 張圖片")
     with st.expander("👁️ 檢視上傳的圖片清單"):
         for i, file in enumerate(uploaded_files):
             st.image(file, caption=f"圖 {i+1}: {file.name}", use_container_width=True)
@@ -279,9 +226,9 @@ else:
 
 st.markdown("---")
 
-# 3. 賽程資料編輯區 (自動帶入判讀結果)
-st.header("📝 3. 賽程資料編輯區 (可自由修改錯字與組別)")
-st.info("💡 提示：上傳圖片後，系統會自動將判讀出的選手資料以「時間 | 組別 | 選手」格式填入下方。")
+# 3. 賽程資料編輯區 (絕對不預設任何名單，完全由使用者輸入)
+st.header("📝 3. 賽程資料編輯區")
+st.info("💡 提示：請對照上方上傳的圖片，依「時間 | 組別 | 選手」格式手動輸入或貼上賽程。")
 
 col_a, col_b = st.columns(2)
 
@@ -291,7 +238,7 @@ with col_a:
         "第一天賽程 (格式：時間 | 組別 | 選手)",
         value=st.session_state["day1_text"],
         height=280,
-        placeholder="尚未上傳圖片..."
+        placeholder="例如：14:30 | 低男單 | 童羿勛"
     )
 
 with col_b:
@@ -300,7 +247,7 @@ with col_b:
         "第二天賽程 (格式：時間 | 組別 | 選手)",
         value=st.session_state["day2_text"],
         height=280,
-        placeholder="尚未上傳圖片..."
+        placeholder="例如：08:45 | 高男雙 | 許宸睿/曾楷翔"
     )
 
 st.markdown("---")
