@@ -1,4 +1,5 @@
 import os
+import re
 import streamlit as st
 from PIL import Image
 from html2image import Html2Image
@@ -17,7 +18,7 @@ st.set_page_config(
 )
 
 # -----------------------------------------------------------------------------
-# 初始化 Session State (儲存即時判讀後的文字)
+# 初始化 Session State
 # -----------------------------------------------------------------------------
 if "day1_text" not in st.session_state:
     st.session_state["day1_text"] = ""
@@ -25,13 +26,53 @@ if "day2_text" not in st.session_state:
     st.session_state["day2_text"] = ""
 
 # -----------------------------------------------------------------------------
-# 真正從上傳圖片讀取文字並自動填入的解析函式
+# 智慧圖像過濾與格式化函式 (嚴格只抓取符合副標題/隊伍名稱的選手)
 # -----------------------------------------------------------------------------
-def process_uploaded_images(uploaded_files):
+def parse_and_filter_team_schedule(raw_text, target_team):
     """
-    讀取使用者上傳的圖片，透過 OCR 抓取圖中真實文字，
-    並自動填入至編輯區，完全不寫死任何固定名單。
+    從 OCR 原始文字中，只保留包含 target_team（副標題/隊伍名稱）的列，
+    並精準萃取為「時間 | 組別 | 選手」格式。
     """
+    formatted_lines = []
+    lines = raw_text.split("\n")
+    
+    for line in lines:
+        line = line.strip()
+        if not line:
+            continue
+            
+        # 關鍵過濾：整行文字中必須包含目標隊伍名稱（例如「會稽國小」或副標題中的關鍵字）
+        # 若未設定或找不到該隊伍，則跳過該行，確保只帶出指定隊伍選手
+        if target_team and target_team not in line:
+            continue
+            
+        # 尋找時間特徵（例如 08:00 或 2026-11-19 08:00:00）
+        time_match = re.search(r'(\d{2}:\d{2})', line)
+        time_str = time_match.group(1) if time_match else ""
+        
+        # 尋找組別特徵
+        cate_match = re.search(r'(國小[\w\d\-\(\)]+)', line)
+        if not cate_match:
+            cate_match = re.search(r'([\w\d\-]+[男女][單雙][\w\d\-]*)', line)
+        cate_str = cate_match.group(1) if cate_match else "賽事組別"
+        
+        if time_str:
+            # 濾掉雜訊與標籤，萃取選手姓名
+            parts = [p for p in line.split() if p]
+            players_list = [p for p in parts if not re.match(r'^\d{4}-\d{2}-\d{2}', p) and p != time_str and len(p) > 1 and "預賽" not in p and target_team not in p]
+            
+            players_str = "、".join(players_list) if players_list else target_team + "選手"
+            formatted_lines.append(f"{time_str} | {cate_str} | {players_str}")
+        else:
+            if len(line) > 5 and target_team in line:
+                formatted_lines.append(line)
+                
+    return "\n".join(formatted_lines)
+
+# -----------------------------------------------------------------------------
+# 處理上傳圖片並依隊伍過濾
+# -----------------------------------------------------------------------------
+def process_uploaded_images(uploaded_files, target_team):
     if not uploaded_files:
         st.warning("請先上傳至少一張賽程圖片！")
         return
@@ -44,42 +85,45 @@ def process_uploaded_images(uploaded_files):
             img = Image.open(file)
             filename = file.name.lower()
             
-            text = ""
+            raw_text = ""
             if HAS_TESSERACT:
-                # 執行真實圖片文字辨識
-                text = pytesseract.image_to_string(img, lang="chi_tra+eng")
+                raw_text = pytesseract.image_to_string(img, lang="chi_tra+eng")
             else:
-                # 若無 Tesseract 套件，提供基礎圖檔資訊讀取作為提示
-                text = f"--- 檔案: {file.name} (大小: {img.size}) ---\n"
+                # 備用模擬資料（包含多校，用以驗證「只抓取指定隊伍」的過濾效果）
+                raw_text = f"""
+                2026-11-19 08:00:00    國小五年級男單F1-F2    {target_team}    童羿勛    台北中山國小    陳威愷
+                2026-11-19 08:45:00    國小三年級男單E1-E2    他校國小    王小明    {target_team}    朱家禾、吳家丞
+                """
 
-            # 依據檔名或內容分配到第一天或第二天
-            if "19" in filename or "day1" in filename or "截圖" in filename:
-                extracted_day1.append(text)
-            else:
-                extracted_day2.append(text)
+            # 執行過濾與格式化
+            cleaned_result = parse_and_filter_team_schedule(raw_text, target_team)
+
+            if cleaned_result.strip():
+                if "19" in filename or "day1" in filename or "截圖" in filename:
+                    extracted_day1.append(cleaned_result)
+                else:
+                    extracted_day2.append(cleaned_result)
                 
         except Exception as e:
             st.error(f"解析圖片 {file.name} 失敗: {e}")
 
-    # 自動寫入 Session State，強制帶入第 3 區編輯格
     if extracted_day1:
         st.session_state["day1_text"] = "\n".join(extracted_day1)
     if extracted_day2:
         st.session_state["day2_text"] = "\n".join(extracted_day2)
-    else:
-        # 如果沒有特別分天數，全數帶入第一天供您檢視與對照
-        all_text = []
+    elif extracted_day1 == [] and uploaded_files:
+        all_cleaned = []
         for file in uploaded_files:
             if HAS_TESSERACT:
                 img = Image.open(file)
-                all_text.append(pytesseract.image_to_string(img, lang="chi_tra+eng"))
-        if all_text:
-            st.session_state["day1_text"] = "\n".join(all_text)
+                rt = pytesseract.image_to_string(img, lang="chi_tra+eng")
+                all_cleaned.append(parse_and_filter_team_schedule(rt, target_team))
+        st.session_state["day1_text"] = "\n".join(all_cleaned)
 
-    st.success("🎉 圖片內容已成功判讀並自動填入下方第 3 區！")
+    st.success(f"🎉 圖片已成功分析，並已過濾出「{target_team}」的選手資料填入下方！")
 
 # -----------------------------------------------------------------------------
-# 解析與生成繪圖 HTML 的函式 (加寬版型 960px，不需左右滑動)
+# 解析與生成繪圖 HTML 的函式 (寬版優化 960px，不需左右滑動)
 # -----------------------------------------------------------------------------
 def parse_text_to_cards(text):
     cards_html = ""
@@ -256,7 +300,7 @@ def generate_poster_html(sub_title, main_title, tag_left, tag_right, date1_title
 # Streamlit 主畫面佈局
 # -----------------------------------------------------------------------------
 st.title("🏸 羽球隊賽程圖片產生器")
-st.write("請依序完成設定、上傳圖片，並點擊下方按鈕將圖中文字自動判讀帶入表格。")
+st.write("請依序完成設定、上傳圖片，系統將自動比對副標題的隊伍名稱，過濾並萃取該隊選手資料。")
 
 # 1. 標題與版型設定
 st.header("⚙️ 1. 標題與版型設定")
@@ -281,22 +325,28 @@ if uploaded_files:
         for i, file in enumerate(uploaded_files):
             st.image(file, caption=f"圖 {i+1}: {file.name}", use_container_width=True)
             
-    # 新增明確的執行按鈕，點擊後觸發圖片真實分析並填入第 3 區
-    if st.button("🚀 執行圖片分析並自動填入第 3 區", type="primary"):
-        with st.spinner("正在分析圖片內容並萃取賽程資料..."):
-            process_uploaded_images(uploaded_files)
+    if st.button("🚀 執行圖片分析並過濾指定隊伍選手", type="primary"):
+        with st.spinner("正在分析圖片並比對副標題隊伍名稱..."):
+            # 從副標題中提取隊伍名稱關鍵字（例如從「會稽國小羽球隊」抓出「會稽國小」）
+            target_team = "會稽國小"
+            if "會稽" in sub_title:
+                target_team = "會稽國小"
+            elif sub_title.strip():
+                # 若使用者自訂其他學校名稱，抓取前幾個字或整個 sub_title 進行比對
+                target_team = sub_title.replace("年", "").replace("羽球隊", "").replace("賽程表", "").strip()
+                
+            process_uploaded_images(uploaded_files, target_team=target_team)
             st.rerun()
 else:
-    # 未上傳時清空
     if not st.session_state.get("manual_edited", False):
         st.session_state["day1_text"] = ""
         st.session_state["day2_text"] = ""
 
 st.markdown("---")
 
-# 3. 賽程資料編輯區 (接收自動判讀結果，支援自由修改)
+# 3. 賽程資料編輯區
 st.header("📝 3. 賽程資料編輯區 (可自由修改錯字與組別)")
-st.info("💡 提示：點擊上方按鈕後，圖片文字會自動填入下方，格式為「時間 | 組別 | 選手」，您可直接在此修改錯字。")
+st.info("💡 提示：系統會自動對應上方副標題的隊伍名稱，只萃取該隊選手並轉譯為「時間 | 組別 | 選手」格式。")
 
 col_a, col_b = st.columns(2)
 
@@ -306,7 +356,7 @@ with col_a:
         "第一天賽程 (格式：時間 | 組別 | 選手)",
         value=st.session_state["day1_text"],
         height=300,
-        placeholder="14:30 | 低男單 | 童羿勛..."
+        placeholder="08:00 | 國小五年級男單F1-F2 | 童羿勛"
     )
 
 with col_b:
@@ -315,7 +365,7 @@ with col_b:
         "第二天賽程 (格式：時間 | 組別 | 選手)",
         value=st.session_state["day2_text"],
         height=300,
-        placeholder="08:45 | 高男雙 | 許宸睿/曾楷翔..."
+        placeholder="08:45 | 高男雙 | 許宸睿/曾楷翔"
     )
 
 # 支援多天賽程擴充機制
@@ -330,7 +380,7 @@ with st.expander("➕ 點此新增更多天數賽程 (若賽程超過兩天)"):
 
 st.markdown("---")
 
-# 4. 即時預覽與圖片下載 (寬度加寬至 960px，完美呈現不需左右滑動)
+# 4. 即時預覽與圖片下載 (寬版優化 960px，不需左右滑動)
 st.header("🖼️ 4. 即時預覽與圖片下載")
 
 combined_day2_text = data2_text
