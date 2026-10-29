@@ -11,7 +11,7 @@ from html2image import Html2Image
 st.set_page_config(
     page_title="羽球隊賽程圖片產生器 (雙表同步)",
     page_icon="🏸",
-    layout="wide"  # 改為寬螢幕版面，方便左右並排預覽兩張海報
+    layout="wide"  # 寬螢幕版面，方便左右並排預覽兩張海報
 )
 
 POSTER_WIDTH = 1080      # 海報固定寬度 (px)
@@ -50,10 +50,23 @@ def get_font_base64():
 # -----------------------------------------------------------------------------
 # Session State 初始化
 # -----------------------------------------------------------------------------
-if "general_text" not in st.session_state:
-    st.session_state["general_text"] = ""
-if "personal_text" not in st.session_state:
-    st.session_state["personal_text"] = ""
+if "g_date1" not in st.session_state:
+    st.session_state["g_date1"] = "9月28日 (星期一)"
+if "g_text1" not in st.session_state:
+    st.session_state["g_text1"] = ""
+if "g_date2" not in st.session_state:
+    st.session_state["g_date2"] = ""
+if "g_text2" not in st.session_state:
+    st.session_state["g_text2"] = ""
+
+if "p_date1" not in st.session_state:
+    st.session_state["p_date1"] = "【2026-11-19】"
+if "p_text1" not in st.session_state:
+    st.session_state["p_text1"] = ""
+if "p_date2" not in st.session_state:
+    st.session_state["p_date2"] = "【2026-11-20】"
+if "p_text2" not in st.session_state:
+    st.session_state["p_text2"] = ""
 
 # -----------------------------------------------------------------------------
 # 解析整體流程表文字 → 卡片 HTML
@@ -105,85 +118,64 @@ def parse_text_to_cards(text):
     return cards_html, len(order)
 
 # -----------------------------------------------------------------------------
-# 解析選手個人賽程文字 (支援多天區塊整合解析)
+# 解析選手個人賽程單區塊文字
 # -----------------------------------------------------------------------------
-def parse_personal_integrated_text(text):
-    blocks = []
-    current_date_title = ""
-    current_lines = []
+def parse_personal_block(text):
+    sections = {} 
+    sec_order = []
+    current_sec = "選手個人賽程"
     
     lines = text.strip().split("\n")
     for line in lines:
         raw_l = line.strip()
         if not raw_l:
             continue
-        if ("【" in raw_l and "】" in raw_l) or ("月" in raw_l and ":" not in raw_l and "｜" not in raw_l and "|" not in raw_l and "男" not in raw_l and "女" not in raw_l):
-            if current_lines or current_date_title:
-                blocks.append((current_date_title, current_lines))
-                current_lines = []
-            current_date_title = raw_l
-        else:
-            current_lines.append(raw_l)
-            
-    if current_lines or current_date_title:
-        blocks.append((current_date_title, current_lines))
-
-    full_html = ""
-    total_metric = 0
-
-    for date_title, block_lines in blocks:
-        if date_title:
-            full_html += f'<div class="p-main-date">{html_lib.escape(date_title)}</div>'
-            
-        sections = {}
-        sec_order = []
-        current_sec = "選手個人賽程"
-        
-        for line in block_lines:
-            if not (":" in line or "｜" in line or "|" in line or "男" in line or "女" in line):
-                current_sec = line.replace("【", "").replace("】", "")
-                if current_sec not in sections:
-                    sections[current_sec] = []
-                    sec_order.append(current_sec)
-                continue
-                
+        if not (":" in raw_l or "｜" in raw_l or "|" in raw_l or "男" in raw_l or "女" in raw_l):
+            current_sec = raw_l.replace("【", "").replace("】", "")
             if current_sec not in sections:
                 sections[current_sec] = []
                 sec_order.append(current_sec)
-            sections[current_sec].append(line)
-
-        for sec in sec_order:
-            items = sections[sec]
-            if not items:
-                continue
-            total_metric += len(items) + 1
+            continue
             
-            rows_html = ""
-            for item in items:
-                parts = item.split(":", 1)
-                left_part = parts[0].strip()
-                time_part = parts[1].strip() if len(parts) > 1 else ""
-                
-                gender = "男" if left_part.startswith("男") else "女"
-                name_cate = left_part[1:].strip() 
-                
-                gender_class = "gender-f" if gender == "女" else "gender-m"
-                
-                rows_html += f"""
-                <div class="p-row">
-                  <span class="gender-badge {gender_class}">{gender}</span>
-                  <span class="p-main-text">{html_lib.escape(name_cate)} : {html_lib.escape(time_part)}</span>
-                </div>
-                """
-                
-            full_html += f"""
-            <div class="p-section-title">{html_lib.escape(sec)}</div>
-            <div class="p-box">
-              {rows_html}
+        if current_sec not in sections:
+            sections[current_sec] = []
+            sec_order.append(current_sec)
+        sections[current_sec].append(raw_l)
+
+    result_html = ""
+    total_items = 0
+    
+    for sec in sec_order:
+        items = sections[sec]
+        if not items:
+            continue
+        total_items += len(items) + 1
+        
+        rows_html = ""
+        for item in items:
+            parts = item.split(":", 1)
+            left_part = parts[0].strip()
+            time_part = parts[1].strip() if len(parts) > 1 else ""
+            
+            gender = "男" if left_part.startswith("男") else "女"
+            name_cate = left_part[1:].strip() 
+            
+            gender_class = "gender-f" if gender == "女" else "gender-m"
+            
+            rows_html += f"""
+            <div class="p-row">
+              <span class="gender-badge {gender_class}">{gender}</span>
+              <span class="p-main-text">{html_lib.escape(name_cate)} : {html_lib.escape(time_part)}</span>
             </div>
             """
-
-    return full_html, max(1, total_metric)
+            
+        result_html += f"""
+        <div class="p-section-title">{html_lib.escape(sec)}</div>
+        <div class="p-box">
+          {rows_html}
+        </div>
+        """
+    return result_html, total_items
 
 # -----------------------------------------------------------------------------
 # 羽球拍與羽球組合專屬圖示 (黃色)
@@ -201,27 +193,63 @@ def badge_svg(bg):
 </svg>"""
 
 # -----------------------------------------------------------------------------
-# 產生海報 HTML
+# 產生海報 HTML 核心函式
 # -----------------------------------------------------------------------------
 def generate_poster_html(sub_title, main_title, tag_left, tag_right,
-                         schedule_text, body_font_size=28, theme_name="藍色體系", 
+                         date1_title, data1_text, date2_title, data2_text,
+                         extra_date="", extra_text="",
+                         body_font_size=28, theme_name="藍色體系", 
                          title_font_size=100, mode="整體流程表", preview=True):
     theme = THEMES[theme_name]
     bg_color = theme["bg"]
 
+    total_metric = 0
+    body_content = ""
+
     if mode == "整體流程表":
-        c1, count1 = parse_text_to_cards(schedule_text)
+        c1, count1 = parse_text_to_cards(data1_text)
+        title1_html = (f'<div class="section-title">{html_lib.escape(date1_title)}</div>' if date1_title.strip() else "")
+        
+        show_day2 = bool(data2_text.strip())
+        c2, count2 = parse_text_to_cards(data2_text) if show_day2 else ("", 0)
+        title2_html = (f'<div class="section-title">{html_lib.escape(date2_title)}</div>' if (show_day2 and date2_title.strip()) else "")
+        day2_html = (f'{title2_html}<div class="grid">{c2}</div>' if show_day2 else "")
+        
+        show_extra = bool(extra_text.strip())
+        cx, count_x = parse_text_to_cards(extra_text) if show_extra else ("", 0)
+        title_x_html = (f'<div class="section-title">{html_lib.escape(extra_date)}</div>' if (show_extra and extra_date.strip()) else "")
+        extra_html = (f'{title_x_html}<div class="grid">{cx}</div>' if show_extra else "")
+
         body_content = f"""
   <div class="section-container">
+    {title1_html}
     <div class="grid">{c1}</div>
+    {day2_html}
+    {extra_html}
   </div>"""
-        total_metric = count1
+        total_metric = count1 + count2 + count_x
     else:
-        body_content_html, total_metric = parse_personal_integrated_text(schedule_text)
+        title1_html = (f'<div class="p-main-date">{html_lib.escape(date1_title)}</div>' if date1_title.strip() else "")
+        c1_html, count1 = parse_personal_block(data1_text) if data1_text.strip() else ("", 0)
+        
+        show_day2 = bool(data2_text.strip())
+        title2_html = (f'<div class="p-main-date">{html_lib.escape(date2_title)}</div>' if (show_day2 and date2_title.strip()) else "")
+        c2_html, count2 = parse_personal_block(data2_text) if show_day2 else ("", 0)
+        day2_block = f"{title2_html}{c2_html}" if show_day2 else ""
+        
+        show_extra = bool(extra_text.strip())
+        title_x_html = (f'<div class="p-main-date">{html_lib.escape(extra_date)}</div>' if (show_extra and extra_date.strip()) else "")
+        cx_html, count_x = parse_personal_block(extra_text) if show_extra else ("", 0)
+        extra_block = f"{title_x_html}{cx_html}" if show_extra else ""
+
         body_content = f"""
   <div class="section-container">
-    {body_content_html}
+    {title1_html}
+    {c1_html}
+    {day2_block}
+    {extra_block}
   </div>"""
+        total_metric = count1 + count2 + count_x
 
     sub_title = html_lib.escape(sub_title)
     main_title = html_lib.escape(main_title)
@@ -404,7 +432,7 @@ def generate_poster_html(sub_title, main_title, tag_left, tag_right,
 {preview_script}
 </body>
 </html>"""
-    return html_content, total_metric
+    return html_content, max(1, total_metric)
 
 # -----------------------------------------------------------------------------
 # 輸出 PNG
@@ -437,10 +465,10 @@ def render_png(html_str, total_metric, out_path="generated_schedule.png"):
     return out_path
 
 # -----------------------------------------------------------------------------
-# 主畫面 (四個區塊完美整合)
+# 主畫面 (雙表並排架構)
 # -----------------------------------------------------------------------------
 st.title("🏸 羽球隊賽程圖片產生器 (雙表同步產出)")
-st.write(f"請依照下方步驟設定共用樣式與填入兩份賽程資料，系統將同時產出**整體流程表**與**選手個人賽程**兩張完整海報！")
+st.write(f"請在下方設定共用樣式，並分別填入**整體流程表**與**選手個人賽程**的多天資料，系統將同時產出兩張完整海報！")
 
 # 1. 標題、版型與樣式設定
 st.header("⚙️ 1. 標題、版型與樣式設定 (兩張表共用)")
@@ -463,30 +491,44 @@ with col_c3:
 
 st.markdown("---")
 
-# 2 & 3. 賽程資料編輯區 (左右並排輸入)
+# 2 & 3. 賽程資料編輯區 (左右並排，支援多天與獨立日期標題)
 col_input1, col_input2 = st.columns(2)
 
 with col_input1:
     st.header("📝 2. 賽程資料編輯區 (整體流程表)")
     st.info("💡 格式：時間 ｜ 組別 ｜ 選手")
-    general_text = st.text_area(
-        "整體流程表內容",
-        value=st.session_state["general_text"],
-        height=350,
-        placeholder="例如：\n09:00 ｜ 低男單 ｜ 王大明"
-    )
-    st.session_state["general_text"] = general_text
+    
+    g_date1 = st.text_input("第一天日期說明 (整體)", value=st.session_state["g_date1"])
+    g_text1 = st.text_area("第一天賽程 (整體)", value=st.session_state["g_text1"], height=200, placeholder="09:00 ｜ 低男單 ｜ 王大明")
+    
+    g_date2 = st.text_input("第二天日期說明 (整體・若無可留空)", value=st.session_state["g_date2"])
+    g_text2 = st.text_area("第二天賽程 (整體)", value=st.session_state["g_text2"], height=200, placeholder="若無第二天請保持空白...")
+
+    st.session_state["g_date1"] = g_date1
+    st.session_state["g_text1"] = g_text1
+    st.session_state["g_date2"] = g_date2
+    st.session_state["g_text2"] = g_text2
 
 with col_input2:
     st.header("📝 3. 賽程資料編輯區 (選手個人賽程)")
     st.info("💡 格式：分類標題換行後接 `男/女 選手姓名 (組別) : 時間`")
-    personal_text = st.text_area(
-        "選手個人賽程內容",
-        value=st.session_state["personal_text"],
-        height=350,
-        placeholder="【2026-11-19】\n低年級\n男  童羿勛 (低男單) : 12:00、14:30"
-    )
-    st.session_state["personal_text"] = personal_text
+    
+    p_date1 = st.text_input("第一天日期說明 (個人)", value=st.session_state["p_date1"])
+    p_text1 = st.text_area("第一天賽程 (個人)", value=st.session_state["p_text1"], height=200, placeholder="低年級\n男  童羿勛 (低男單) : 12:00")
+    
+    p_date2 = st.text_input("第二天日期說明 (個人・若無可留空)", value=st.session_state["p_date2"])
+    p_text2 = st.text_area("第二天賽程 (個人)", value=st.session_state["p_text2"], height=200, placeholder="若無第二天請保持空白...")
+
+    st.session_state["p_date1"] = p_date1
+    st.session_state["p_text1"] = p_text1
+    st.session_state["p_date2"] = p_date2
+    st.session_state["p_text2"] = p_text2
+
+# 額外天數擴充
+with st.expander("➕ 點此新增更多天數賽程 (若賽程超過兩天)"):
+    extra_date = st.text_input("額外天數日期說明", value="")
+    extra_gen_text = st.text_area("額外天數賽程 (整體流程表)", value="", height=120)
+    extra_per_text = st.text_area("額外天數賽程 (選手個人賽程)", value="", height=120)
 
 st.markdown("---")
 
@@ -495,27 +537,33 @@ st.header("🖼️ 4. 即時預覽與圖片下載 (左右兩張)")
 
 col_prev1, col_prev2 = st.columns(2)
 
-# --- 生成整體流程表資料 ---
+# 組裝整體流程表參數
 kwargs_gen = dict(
     sub_title=sub_title, main_title=main_title,
     tag_left=tag_left_gen, tag_right=tag_right,
-    schedule_text=general_text, body_font_size=body_font_size,
-    theme_name=theme_name, title_font_size=title_font_size,
-    mode="整體流程表"
+    date1_title=g_date1, data1_text=g_text1,
+    date2_title=g_date2, data2_text=g_text2,
+    extra_date=extra_date if extra_date.strip() else "",
+    extra_text=extra_gen_text if extra_date.strip() else "",
+    body_font_size=body_font_size, theme_name=theme_name,
+    title_font_size=title_font_size, mode="整體流程表"
 )
 
-# --- 生成選手個人賽程資料 ---
+# 組裝選手個人賽程參數
 kwargs_per = dict(
     sub_title=sub_title, main_title=main_title,
     tag_left=tag_left_per, tag_right=tag_right,
-    schedule_text=personal_text, body_font_size=body_font_size,
-    theme_name=theme_name, title_font_size=title_font_size,
-    mode="選手個人賽程"
+    date1_title=p_date1, data1_text=p_text1,
+    date2_title=p_date2, data2_text=p_text2,
+    extra_date=extra_date if extra_date.strip() else "",
+    extra_text=extra_per_text if extra_date.strip() else "",
+    body_font_size=body_font_size, theme_name=theme_name,
+    title_font_size=title_font_size, mode="選手個人賽程"
 )
 
 with col_prev1:
     st.subheader("🌐 【整體流程表】預覽")
-    if general_text.strip():
+    if g_text1.strip() or g_text2.strip():
         html_g_prev, metric_g = generate_poster_html(preview=True, **kwargs_gen)
         st.components.v1.html(html_g_prev, height=750, scrolling=False)
         
@@ -528,11 +576,11 @@ with col_prev1:
                     with open(path_g, "rb") as f:
                         st.download_button("⬇️ 下載整體流程表 (PNG)", data=f, file_name="整體流程表.png", mime="image/png", key="dl_g")
     else:
-        st.info("請在上方第 2 區填入整體流程表資料以顯示預覽。")
+        st.info("請在左上方填入整體流程表資料以顯示預覽。")
 
 with col_prev2:
     st.subheader("🌐 【選手個人賽程】預覽")
-    if personal_text.strip():
+    if p_text1.strip() or p_text2.strip():
         html_p_prev, metric_p = generate_poster_html(preview=True, **kwargs_per)
         st.components.v1.html(html_p_prev, height=750, scrolling=False)
         
@@ -545,4 +593,4 @@ with col_prev2:
                     with open(path_p, "rb") as f:
                         st.download_button("⬇️ 下載選手個人賽程 (PNG)", data=f, file_name="選手個人賽程.png", mime="image/png", key="dl_p")
     else:
-        st.info("請在上方第 3 區填入選手個人賽程資料以顯示預覽。")
+        st.info("請在右上方填入選手個人賽程資料以顯示預覽。")
