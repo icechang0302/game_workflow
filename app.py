@@ -1,199 +1,217 @@
-import os
-import io
 import streamlit as st
-from PIL import Image
+from html2image import Html2Image
+import os
 
-# 匯入圖片產生模組
-import schedule_team
-import schedule_personal
+st.set_page_config(page_title="羽球賽程圖片產生器", page_icon="🏸", layout="centered")
 
-# 頁面配置
-st.set_page_config(
-    page_title="羽球隊賽程圖片產生器",
-    page_icon="🏸",
-    layout="wide"
-)
+st.title("🏸 羽球賽程圖片產生器")
+st.write("上傳或輸入賽程資訊，自訂標題與日期，一鍵生成手機版精美流程圖！")
 
-# 注入自訂深色主題 CSS
-st.markdown("""
-<style>
-    /* 全域背景深藍風格 */
-    .stApp {
-        background-color: #0b1329;
-        color: #f1f5f9;
-    }
-    
-    /* 標題與內文顏色 */
-    h1, h2, h3, h4, h5, label {
-        color: #ffffff !important;
-    }
-    
-    /* 卡片式容器區塊 */
-    div[data-testid="stVerticalBlock"] > div > div[data-testid="stVerticalBlock"] {
-        background-color: #131f3d;
-        border: 1px solid #1e2d52;
-        border-radius: 12px;
-        padding: 20px;
-        margin-bottom: 20px;
-    }
+# --- 1. 使用者自訂設定 ---
+st.sidebar.header("⚙️ 圖片基本設定")
+main_title_input = st.sidebar.text_input("主標題", value="整體流程表")
+sub_title_input = st.sidebar.text_input("副標題 / 賽事名稱", value="2026年會稽國小羽球隊賽程表")
+tag_left = st.sidebar.text_input("標籤 (左)", value="整體流程表")
+tag_right = st.sidebar.text_input("標籤 (右)", value="日期：2026/11/19-20")
 
-    /* 上傳檔案區域虛線框風格 */
-    div[data-testid="stFileUploader"] {
-        background-color: #0d172e;
-        border: 2px dashed #2563eb;
-        border-radius: 10px;
-        padding: 15px;
-    }
+# --- 2. 日期與賽程區塊設定 ---
+st.subheader("📅 賽程資料填寫")
+col1, col2 = st.columns(2)
 
-    /* 按鈕樣式 (黃色按鈕) */
-    .stButton>button {
-        background-color: #f59e0b;
-        color: #000000;
-        font-weight: bold;
-        border-radius: 8px;
-        border: none;
-        padding: 10px 24px;
-        font-size: 16px;
-    }
-    .stButton>button:hover {
-        background-color: #d97706;
-        color: #000000;
-    }
+with col1:
+    section_1_title = st.text_input("第一區塊標題", value="11月19日 (星期四)")
+    # 預設範例文字，使用者可自行在文字框中修改任何錯字或內容
+    data_1_text = st.text_area(
+        "第一區塊賽程 (格式：時間 | 組別 | 選手，每行一筆)",
+        value="08:00 | 五男單 | 張智勛、謝翔宇\n08:45 | 三男單 | 林祐頡\n09:15 | 五男單 | 林靖洋、謝翔宇\n09:30 | 五男單 | 曾楷翔\n10:00 | 三男單 | 林祐頡、謝皓宇\n10:30 | 五男單 | 張智勛、林靖洋\n10:45 | 五男單 | 曾楷翔\n11:15 | 三男單 | 謝皓宇\n11:45 | 三女單 | 吳雨恩\n12:00 | 三女單 | 凃萭希\n12:00 | 低男單 | 童羿勛、謝皓喆\n12:15 | 低男單 | 廖胤期\n13:00 | 三女單 | 吳雨恩\n13:15 | 三女單 | 凃萭希\n13:15 | 低男單 | 謝皓喆、吳家丞\n14:15 | 三女單 | 凃萭希\n14:30 | 低男單 | 童羿勛、吳家丞、廖胤期\n15:15 | 低女單 | 林子晴\n15:45 | 低女單 | 林子晴",
+        height=300
+    )
 
-    /* 下載按鈕 (黃/橙色風格) */
-    .stDownloadButton>button {
-        background-color: #f59e0b;
-        color: #000000;
-        font-weight: bold;
-        border-radius: 8px;
-        border: none;
-        padding: 10px 24px;
-        font-size: 16px;
-    }
-    .stDownloadButton>button:hover {
-        background-color: #d97706;
-        color: #000000;
-    }
-</style>
-""", unsafe_allow_html=True)
+with col2:
+    section_2_title = st.text_input("第二區塊標題", value="11月20日 (星期五)")
+    data_2_text = st.text_area(
+        "第二區塊賽程 (格式：時間 | 組別 | 選手，每行一筆)",
+        value="08:45 | 高男雙 | 許宸睿/曾楷翔\n09:00 | 中男雙 | 林祐頡/謝皓喆\n09:30 | 中男雙 | 林祐頡/謝皓喆\n09:30 | 高男雙 | 許宸睿/曾楷翔\n11:00 | 六男單 | 許宸睿\n12:30 | 六女單 | 黃芊萓、蔡昀妡\n13:45 | 六男單 | 許宸睿\n14:15 | 六女單 | 蔡昀妡\n15:00 | 六女單 | 黃芊萓、蔡昀妡",
+        height=300
+    )
 
-# ----------------------------------------------------
-# 頂部 Header
-# ----------------------------------------------------
-col_title, col_btn = st.columns([3, 1])
-with col_title:
-    st.title("🏸 羽球隊賽程圖片產生器")
-    st.caption("免安裝軟體・線上編輯錯字・一鍵導出手機 A4 高解析圖")
+# 解析文字轉換成清單的函式
+def parse_text_to_cards(text):
+    cards_html = ""
+    lines = text.strip().split("\n")
+    for line in lines:
+        parts = [p.strip() for p in line.split("|")]
+        if len(parts) >= 3:
+            time_str = parts[0]
+            cate = parts[1]
+            players = parts[2]
+            cards_html += f"""
+            <div class="card">
+              <div class="time-header">{time_str}</div>
+              <div class="content">
+                <div class="item"><span class="cate">【{cate}】</span>{players}</div>
+              </div>
+            </div>
+            """
+    return cards_html
 
-with col_btn:
-    st.write("") # 間距調整
+# --- 3. 產出圖片按鈕 ---
+if st.button("🎨 一鍵生成賽程圖片", type="primary"):
+    with st.spinner("正在為您排版並生成圖片中..."):
+        c19 = parse_text_to_cards(data_1_text)
+        c20 = parse_text_to_cards(data_2_text)
 
-# ----------------------------------------------------
-# 區塊 1：多圖辨識 / 快速帶入賽程
-# ----------------------------------------------------
-st.subheader("🪄 多圖辨識 / 快速帶入賽程")
-st.caption("您一次可以選擇多張紙本賽程照片，系統將批次辨識並自動分類整理至下方。")
+        html_template = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+        <meta charset="utf-8">
+        <style>
+          body {{
+            background-color: #0d1b2a;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans TC", sans-serif;
+            color: #ffffff;
+            margin: 0;
+            padding: 30px 25px;
+            width: 800px;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+          }}
+          .header {{
+            text-align: center;
+            margin-bottom: 22px;
+            width: 100%;
+          }}
+          .badge-icon {{
+            font-size: 32px;
+            margin-bottom: 4px;
+          }}
+          .sub-title {{
+            color: #cbd5e1;
+            font-size: 18px;
+            font-weight: 600;
+          }}
+          .main-title {{
+            font-size: 34px;
+            font-weight: 800;
+            margin: 6px 0 12px 0;
+            color: #ffffff;
+            letter-spacing: 1px;
+          }}
+          .tags {{
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+          }}
+          .tag-yellow {{
+            background-color: #f59e0b;
+            color: #000;
+            font-weight: bold;
+            padding: 5px 16px;
+            border-radius: 16px;
+            font-size: 15px;
+          }}
+          .tag-white {{
+            background-color: #ffffff;
+            color: #000;
+            font-weight: bold;
+            padding: 5px 16px;
+            border-radius: 16px;
+            font-size: 15px;
+          }}
+          .section-container {{
+            width: 100%;
+            max-width: 750px;
+          }}
+          .section-title {{
+            background-color: #1e3a8a;
+            color: #ffffff;
+            text-align: center;
+            font-size: 19px;
+            font-weight: bold;
+            padding: 10px;
+            border-radius: 6px;
+            margin: 20px 0 12px 0;
+            border: 2px solid #3b82f6;
+          }}
+          .grid {{
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 10px;
+          }}
+          .card {{
+            background-color: #1e3a8a;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+          }}
+          .time-header {{
+            background-color: #1e40af;
+            text-align: center;
+            padding: 7px 0;
+            font-size: 17px;
+            font-weight: bold;
+            color: #ffffff;
+            border-bottom: 1px solid #2563eb;
+          }}
+          .content {{
+            background-color: #ffffff;
+            padding: 10px 14px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            gap: 5px;
+          }}
+          .item {{
+            font-size: 16px;
+            color: #1e293b;
+            font-weight: 700;
+            line-height: 1.35;
+          }}
+          .cate {{
+            color: #dc2626;
+            font-weight: bold;
+          }}
+        </style>
+        </head>
+        <body>
+          <div class="header">
+            <div class="badge-icon">🏸</div>
+            <div class="sub-title">{sub_title_input}</div>
+            <div class="main-title">{main_title_input}</div>
+            <div class="tags">
+              <span class="tag-yellow">{tag_left}</span>
+              <span class="tag-white">{tag_right}</span>
+            </div>
+          </div>
 
-uploaded_files = st.file_uploader(
-    "點擊選擇多張賽程照片 (或拖曳至此)",
-    type=["png", "jpg", "jpeg", "webp"],
-    accept_multiple_files=True,
-    help="可同時選擇多張 PNG, JPG, WEBP 檔案"
-)
+          <div class="section-container">
+            <div class="section-title">📅 {section_1_title}</div>
+            <div class="grid">{c19}</div>
 
-if uploaded_files:
-    st.success(f"已成功上傳 {len(uploaded_files)} 張照片，系統準備為您處理！")
+            <div class="section-title">📅 {section_2_title}</div>
+            <div class="grid">{c20}</div>
+          </div>
+        </body>
+        </html>
+        """
 
-st.markdown("---")
+        # 產出圖片
+        output_filename = "generated_schedule.png"
+        hti = Html2Image(output_path='.')
+        hti.screenshot(html_str=html_template, save_as=output_filename, size=(840, 1650))
 
-# ----------------------------------------------------
-# 頁籤設定：選擇編輯整體還是個人賽程
-# ----------------------------------------------------
-tab1, tab2 = st.tabs(["📊 團隊整體流程圖編輯", "👤 選手個人賽程圖編輯"])
-
-# ----------------------------------------------------
-# TAB 1: 團隊整體賽程圖設定
-# ----------------------------------------------------
-with tab1:
-    st.subheader("📝 賽程表基本標題與字體微調")
-    
-    c1, c2 = st.columns(2)
-    with c1:
-        main_title = st.text_input("主標題 (大字)", value="整體流程表", key="team_main")
-        tag_left = st.text_input("標籤 (左邊黃標)", value="整體流程表", key="team_tag_l")
-    with c2:
-        sub_title = st.text_input("副標題 / 隊名賽事", value="2026年會稽國小羽球隊賽程表", key="team_sub")
-        tag_right = st.text_input("標籤 (右邊白標)", value="日期：2026/11/19-20", key="team_tag_r")
-
-    # 滑桿控制選手名字字體大小
-    player_font_size = st.slider("🔤 選手名字字體大小 (px)", min_value=12, max_value=24, value=16, step=1, key="team_font_slider")
-
-    st.markdown("---")
-    
-    # 產生圖片按鈕區
-    if st.button("🚀 產生團隊賽程圖片", key="btn_gen_team"):
-        with st.spinner("繪製高品質圖片中..."):
-            # 動態更新設定檔
-            schedule_team.CONFIG["SIZE_PLAYER"] = player_font_size
-            
-            output_file = "2026_羽球總流程表.png"
-            schedule_team.create_team_schedule(output_filename=output_file)
-            
-            if os.path.exists(output_file):
-                img = Image.open(output_file)
-                st.image(img, caption="團隊賽程即時預覽圖", use_column_width=True)
-                
-                buf = io.BytesIO()
-                img.save(buf, format="PNG")
-                
-                st.download_button(
-                    label="📥 下載賽程圖片 (PNG)",
-                    data=buf.getvalue(),
-                    file_name="2026_會稽國小羽球隊_整體賽程表.png",
-                    mime="image/png"
-                )
-
-# ----------------------------------------------------
-# TAB 2: 個人賽程圖設定
-# ----------------------------------------------------
-with tab2:
-    st.subheader("📝 個人賽程表標題與字體微調")
-    
-    c1, c2 = st.columns(2)
-    with c1:
-        p_main_title = st.text_input("主標題 (大字)", value="MAUC 春季賽", key="p_main")
-        p_tag_left = st.text_input("標籤 (左邊黃標)", value="選手個人賽程", key="p_tag_l")
-    with c2:
-        p_sub_title = st.text_input("副標題 / 隊名賽事", value="2027年牧羽盃全國四季聯賽", key="p_sub")
-        p_tag_right = st.text_input("標籤 (右邊白標)", value="日期：2027/03/15 (一)", key="p_tag_r")
-
-    p_player_font_size = st.slider("🔤 選手名字與項目字體大小 (px)", min_value=12, max_value=24, value=16, step=1, key="p_font_slider")
-
-    st.markdown("---")
-
-    if st.button("🚀 產生個人賽程圖片", key="btn_gen_personal"):
-        with st.spinner("繪製高品質圖片中..."):
-            schedule_personal.CONFIG["SIZE_TEXT"] = p_player_font_size
-            
-            output_file = "2027_個人賽程精美版.png"
-            schedule_personal.generate_styled_personal_schedule(
-                main_title=p_main_title,
-                sub_title=p_sub_title,
-                tag_left=p_tag_left,
-                tag_right=p_tag_right,
-                output_filename=output_file
+        # 在網頁上顯示圖片供預覽與下載
+        st.success("🎉 圖片生成成功！")
+        st.image(output_filename, caption="預覽圖", use_container_width=True)
+        
+        with open(output_filename, "rb") as file:
+            st.download_button(
+                label="📥 下載這張賽程圖片",
+                data=file,
+                file_name="羽球賽程流程表.png",
+                mime="image/png"
             )
-            
-            if os.path.exists(output_file):
-                img = Image.open(output_file)
-                st.image(img, caption="個人賽程即時預覽圖", use_column_width=True)
-                
-                buf = io.BytesIO()
-                img.save(buf, format="PNG")
-                
-                st.download_button(
-                    label="📥 下載個人賽程圖片 (PNG)",
-                    data=buf.getvalue(),
-                    file_name="2027_選手個人賽程.png",
-                    mime="image/png"
-                )
