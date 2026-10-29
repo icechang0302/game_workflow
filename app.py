@@ -3,6 +3,13 @@ import streamlit as st
 from PIL import Image
 from html2image import Html2Image
 
+# 安全匯入 pytesseract
+try:
+    import pytesseract
+    HAS_TESSERACT = True
+except ImportError:
+    HAS_TESSERACT = False
+
 st.set_page_config(
     page_title="羽球隊賽程圖片產生器",
     page_icon="🏸",
@@ -16,6 +23,49 @@ if "day1_text" not in st.session_state:
     st.session_state["day1_text"] = ""
 if "day2_text" not in st.session_state:
     st.session_state["day2_text"] = ""
+
+# -----------------------------------------------------------------------------
+# 純影像判讀函式：完全不寫死，透過 OCR 抓取上傳圖片文字
+# -----------------------------------------------------------------------------
+def auto_parse_images_with_ocr(uploaded_files):
+    """
+    不使用任何寫死名單，完全透過 OCR 辨識上傳圖片中的文字。
+    """
+    if not uploaded_files:
+        st.session_state["day1_text"] = ""
+        st.session_state["day2_text"] = ""
+        return
+
+    if not HAS_TESSERACT:
+        st.warning("⚠️ 系統偵測到未安裝 Tesseract 模組，無法進行自動圖像判讀。請在編輯區手動輸入或貼上。")
+        return
+
+    day1_lines = []
+    day2_lines = []
+
+    for file in uploaded_files:
+        try:
+            img = Image.open(file)
+            # 執行 OCR 辨識（支援繁體中文與英文）
+            raw_text = pytesseract.image_to_string(img, lang="chi_tra+eng")
+            
+            # 清理並過濾空白行，將判讀出的文字逐行加入
+            cleaned_lines = [line.strip() for line in raw_text.split("\n") if line.strip()]
+            
+            filename = file.name.lower()
+            if "19" in filename or "day1" in filename:
+                day1_lines.extend(cleaned_lines)
+            else:
+                day2_lines.extend(cleaned_lines)
+                
+        except Exception as e:
+            st.error(f"判讀圖片 {file.name} 時發生錯誤: {e}")
+
+    # 將 OCR 判讀結果寫入 Session State 自動帶入編輯區
+    if day1_lines:
+        st.session_state["day1_text"] = "\n".join(day1_lines)
+    if day2_lines:
+        st.session_state["day2_text"] = "\n".join(day2_lines)
 
 # -----------------------------------------------------------------------------
 # 解析與生成繪圖 HTML 的函式
@@ -195,7 +245,7 @@ def generate_poster_html(sub_title, main_title, tag_left, tag_right, date1_title
 # Streamlit 主畫面佈局
 # -----------------------------------------------------------------------------
 st.title("🏸 羽球隊賽程圖片產生器")
-st.write("請依序在主畫面完成設定、上傳圖片，系統將自動判讀並帶入下方編輯區。")
+st.write("請上傳賽程圖片，系統將自動進行 OCR 圖像辨識並帶入下方編輯區。")
 
 # 1. 標題與版型設定
 st.header("⚙️ 1. 標題與版型設定")
@@ -215,44 +265,22 @@ st.markdown("---")
 st.header("📷 2. 上傳多張賽程參考圖片")
 uploaded_files = st.file_uploader("選擇多張賽程圖片檔...", type=["jpg", "jpeg", "png"], accept_multiple_files=True)
 
-# 處理圖片上傳後的動態帶入
-parsed_day1 = ""
-parsed_day2 = ""
-
+# 當有上傳圖片時，觸發 OCR 自動判讀
 if uploaded_files:
-    d1_list = []
-    d2_list = []
-    for file in uploaded_files:
-        filename = file.name.lower()
-        # 根據檔案自動帶入格式化對應內容
-        if "19" in filename or "day1" in filename:
-            d1_list.append("14:30 | 低男單 | 童羿勛")
-            d1_list.append("14:30 | 低男單 | 朱家禾、吳家丞")
-            d1_list.append("14:30 | 低男單 | 廖胤期")
-            d1_list.append("15:15 | 低女單 | 林子晴")
-            d1_list.append("15:45 | 低女單 | 林子晴")
-        else:
-            d2_list.append("08:45 | 高男雙 | 許宸睿/曾楷翔")
-            d2_list.append("09:00 | 中男雙 | 林祐頡/謝皓喆")
-            d2_list.append("09:30 | 中男雙 | 林祐頡/謝皓喆")
-            d2_list.append("09:30 | 高男雙 | 許宸睿/曾楷翔")
-            d2_list.append("11:00 | 六男單 | 許宸睿")
-            d2_list.append("12:30 | 六女單 | 黃芊萓")
-            d2_list.append("12:30 | 六女單 | 蔡昀妡")
-
-    parsed_day1 = "\n".join(d1_list)
-    parsed_day2 = "\n".join(d2_list)
-
-    st.success(f"已成功上傳 {len(uploaded_files)} 張圖片，內容已自動帶入下方！")
+    auto_parse_images_with_ocr(uploaded_files)
+    st.success(f"已成功上傳 {len(uploaded_files)} 張圖片，已執行圖像文字辨識！")
     with st.expander("👁️ 檢視上傳的圖片清單"):
         for i, file in enumerate(uploaded_files):
             st.image(file, caption=f"圖 {i+1}: {file.name}", use_container_width=True)
+else:
+    st.session_state["day1_text"] = ""
+    st.session_state["day2_text"] = ""
 
 st.markdown("---")
 
-# 3. 賽程資料編輯區 (直接綁定 parsed_day1 / parsed_day2，確保 100% 帶出)
+# 3. 賽程資料編輯區 (由 OCR 判讀結果動態帶入)
 st.header("📝 3. 賽程資料編輯區 (可自由修改錯字與組別)")
-st.info("💡 提示：上傳圖片後系統將自動判讀並填入下方欄位，您可直接在此修改錯字或調整內容。")
+st.info("💡 提示：系統會將圖片辨識結果自動填入下方，您可直接在此修改錯字或調整為標準格式。")
 
 col_a, col_b = st.columns(2)
 
@@ -260,18 +288,18 @@ with col_a:
     date1_title = st.text_input("第一天日期說明", value="11月19日 (星期四)")
     data1_text = st.text_area(
         "第一天賽程 (格式：時間 | 組別 | 選手)",
-        value=parsed_day1,
+        value=st.session_state["day1_text"],
         height=280,
-        placeholder="尚未上傳圖片或內容空白..."
+        placeholder="尚未上傳圖片或無判讀內容..."
     )
 
 with col_b:
     date2_title = st.text_input("第二天日期說明 (若無可留空)", value="11月20日 (星期五)")
     data2_text = st.text_area(
         "第二天賽程 (格式：時間 | 組別 | 選手)",
-        value=parsed_day2,
+        value=st.session_state["day2_text"],
         height=280,
-        placeholder="尚未上傳圖片或內容空白..."
+        placeholder="尚未上傳圖片或無判讀內容..."
     )
 
 st.markdown("---")
