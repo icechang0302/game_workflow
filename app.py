@@ -11,18 +11,21 @@ st.set_page_config(
 )
 
 # -----------------------------------------------------------------------------
-# 初始化中文字型 (確保雲端環境不產生 □□□ 亂碼)
+# 初始化中文字型 (確保下載 PNG 絕不出現方塊字亂碼)
 # -----------------------------------------------------------------------------
 @st.cache_resource
 def setup_chinese_font():
-    font_path = "NotoSansTC-Regular.ttf"
+    font_filename = "NotoSansTC-Regular.ttf"
+    font_path = os.path.abspath(font_filename)
     if not os.path.exists(font_path):
         try:
             url = "https://github.com/google/fonts/raw/main/ofl/notosanstc/NotoSansTC-Regular.ttf"
             urllib.request.urlretrieve(url, font_path)
         except Exception:
             pass
-setup_chinese_font()
+    return font_path
+
+font_path = setup_chinese_font()
 
 # -----------------------------------------------------------------------------
 # 初始化 Session State
@@ -33,13 +36,12 @@ if "day2_text" not in st.session_state:
     st.session_state["day2_text"] = ""
 
 # -----------------------------------------------------------------------------
-# 解析與生成繪圖 HTML 的函式 (同時支援半形 | 與全形 ｜ 分隔符號)
+# 解析與生成繪圖 HTML 的函式
 # -----------------------------------------------------------------------------
 def parse_text_to_cards(text):
     cards_html = ""
     lines = [l.strip() for l in text.strip().split("\n") if l.strip()]
     for line in lines:
-        # 將全形分隔符號 ｜ 統一轉為半形 |，避免使用者貼上時符號不合
         normalized_line = line.replace("｜", "|")
         parts = [p.strip() for p in normalized_line.split("|")]
         
@@ -69,8 +71,12 @@ def generate_poster_html(sub_title, main_title, tag_left, tag_right, date1_title
     c19, count1 = parse_text_to_cards(data1_text)
     c20, count2 = parse_text_to_cards(data2_text)
 
+    # 動態計算高度
     total_cards = max(count1, count2) if date2_title.strip() and data2_text.strip() else count1
     dynamic_height = max(1600, 500 + (total_cards * 110))
+
+    # 使用絕對路徑確保 html2image 能夠完美讀取中文字型
+    font_url_path = font_path.replace("\\", "/")
 
     html_content = f"""<!DOCTYPE html>
 <html>
@@ -79,7 +85,7 @@ def generate_poster_html(sub_title, main_title, tag_left, tag_right, date1_title
 <style>
   @font-face {{
     font-family: 'Noto Sans TC';
-    src: url('NotoSansTC-Regular.ttf');
+    src: url('file://{font_url_path}');
   }}
   body {{
     background-color: {bg_color};
@@ -88,6 +94,7 @@ def generate_poster_html(sub_title, main_title, tag_left, tag_right, date1_title
     margin: 0;
     padding: 50px 50px 100px 50px;
     width: 1580px;
+    height: {dynamic_height}px;
     box-sizing: border-box;
     display: flex;
     flex-direction: column;
@@ -321,8 +328,9 @@ poster_html, dynamic_height = generate_poster_html(
     title_font_size=title_font_size
 )
 
-st.subheader("🌐 網頁即時渲染預覽")
-st.components.v1.html(poster_html, height=800, scrolling=True)
+st.subheader("🌐 網頁即時渲染預覽 (完整呈現・無捲動軸)")
+# 將元件高度直接設為動態高度，並關閉 scrolling，徹底消除 scroll bar
+st.components.v1.html(poster_html, height=dynamic_height, scrolling=False)
 
 st.subheader("📥 匯出為高解析 PNG 圖片")
 if st.button("🚀 產出 PNG 圖片檔案", type="primary"):
@@ -330,6 +338,7 @@ if st.button("🚀 產出 PNG 圖片檔案", type="primary"):
         try:
             output_img_path = "generated_schedule.png"
             hti = Html2Image(output_path='.')
+            # 確保下載的圖片尺寸與動態高度完全一致，且字型絕對不會變成方塊字
             hti.screenshot(html_str=poster_html, save_as=output_img_path, size=(1580, dynamic_height))
             
             if os.path.exists(output_img_path):
