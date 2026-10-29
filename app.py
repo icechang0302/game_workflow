@@ -82,10 +82,21 @@ BADGE_SVG = """<svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www
   <path d="M32 6 L32 44 M21 10 L27 44 M43 10 L37 44" stroke="#94a3b8" stroke-width="1.5" fill="none"/>
 </svg>"""
 
+THEMES = {
+    "藍色體系": dict(bg="#0d1b2a", primary="#1e3a8a", header="#1e40af", line="#3b82f6", cate="#dc2626", accent="#f59e0b"),
+    "綠色體系": dict(bg="#064e3b", primary="#047857", header="#065f46", line="#34d399", cate="#b91c1c", accent="#fbbf24"),
+    "灰色體系": dict(bg="#1e293b", primary="#475569", header="#334155", line="#94a3b8", cate="#dc2626", accent="#f59e0b"),
+    "墨黑體系": dict(bg="#111111", primary="#2d2d2d", header="#404040", line="#a3a3a3", cate="#dc2626", accent="#f59e0b"),
+    "紅色體系": dict(bg="#450a0a", primary="#991b1b", header="#7f1d1d", line="#f87171", cate="#b91c1c", accent="#fbbf24"),
+    "紫色體系": dict(bg="#2e1065", primary="#5b21b6", header="#4c1d95", line="#a78bfa", cate="#dc2626", accent="#f59e0b"),
+}
+
 def generate_poster_html(sub_title, main_title, tag_left, tag_right,
                          date1_title, data1_text, date2_title, data2_text,
-                         item_font_size=16, bg_color="#0d1b2a", title_font_size=46,
+                         body_font_size=20, theme_name="藍色體系", title_font_size=46,
                          preview=True):
+    theme = THEMES[theme_name]
+    bg_color = theme["bg"]
     c1, count1 = parse_text_to_cards(data1_text)
     show_day2 = bool(date2_title.strip() and data2_text.strip())
     c2, count2 = parse_text_to_cards(data2_text) if show_day2 else ("", 0)
@@ -180,7 +191,7 @@ def generate_poster_html(sub_title, main_title, tag_left, tag_right,
   }}
   .tags {{ display: flex; justify-content: center; gap: 18px; }}
   .tag-yellow {{
-    background-color: #f59e0b; color: #000; font-weight: bold;
+    background-color: {theme['accent']}; color: #000; font-weight: bold;
     padding: 8px 24px; border-radius: 22px; font-size: 18px;
   }}
   .tag-white {{
@@ -189,29 +200,29 @@ def generate_poster_html(sub_title, main_title, tag_left, tag_right,
   }}
   .section-container {{ width: 100%; max-width: 1460px; }}
   .section-title {{
-    background-color: #1e3a8a; color: #ffffff; text-align: center;
-    font-size: 24px; font-weight: bold; padding: 15px;
-    border-radius: 10px; margin: 30px 0 18px 0; border: 2px solid #3b82f6;
+    background-color: {theme['primary']}; color: #ffffff; text-align: center;
+    font-size: {body_font_size}px; font-weight: bold; padding: 15px;
+    border-radius: 10px; margin: 30px 0 18px 0; border: 2px solid {theme['line']};
   }}
   .grid {{
     display: grid; grid-template-columns: 1fr 1fr;
     gap: 20px; margin-bottom: 15px;
   }}
   .card {{
-    background-color: #1e3a8a; border-radius: 12px; overflow: hidden;
+    background-color: {theme['primary']}; border-radius: 12px; overflow: hidden;
     box-shadow: 0 6px 16px rgba(0,0,0,0.4);
   }}
   .time-header {{
-    background-color: #1e40af; text-align: center; padding: 11px 0;
-    font-size: 21px; font-weight: bold; color: #ffffff;
-    border-bottom: 1px solid #2563eb;
+    background-color: {theme['header']}; text-align: center; padding: 11px 0;
+    font-size: {body_font_size}px; font-weight: bold; color: #ffffff;
+    border-bottom: 1px solid {theme['line']};
   }}
   .content {{
     background-color: #ffffff; padding: 16px 22px;
     display: flex; flex-direction: column; justify-content: center; gap: 8px;
   }}
-  .item {{ font-size: {item_font_size}px; color: #1e293b; font-weight: 700; line-height: 1.4; }}
-  .cate {{ color: #dc2626; font-weight: bold; }}
+  .item {{ font-size: {body_font_size}px; color: #1e293b; font-weight: 700; line-height: 1.4; }}
+  .cate {{ color: {theme['cate']}; font-weight: bold; }}
 </style>
 </head>
 <body>
@@ -288,19 +299,9 @@ with col_s2:
 
 col_c1, col_c2, col_c3 = st.columns(3)
 with col_c1:
-    bg_color_option = st.selectbox(
-        "海報背景主題",
-        ["經典深藍 (#0d1b2a)", "質感墨黑 (#111111)", "沉穩深灰 (#1e293b)", "運動深綠 (#064e3b)"]
-    )
-    bg_color_map = {
-        "經典深藍 (#0d1b2a)": "#0d1b2a",
-        "質感墨黑 (#111111)": "#111111",
-        "沉穩深灰 (#1e293b)": "#1e293b",
-        "運動深綠 (#064e3b)": "#064e3b"
-    }
-    selected_bg = bg_color_map[bg_color_option]
+    theme_name = st.selectbox("整體色系", list(THEMES.keys()))
 with col_c2:
-    item_font_size = st.slider("選手名字字體大小 (px)", min_value=12, max_value=28, value=18)
+    body_font_size = st.slider("內文字體大小 (px)（日期／時間／選手同大小）", min_value=14, max_value=32, value=20)
 with col_c3:
     title_font_size = st.slider("主標題字體大小 (px)", min_value=32, max_value=60, value=46)
 
@@ -365,8 +366,8 @@ poster_kwargs = dict(
     data1_text=data1_text,
     date2_title=date2_title,
     data2_text=combined_day2_text,
-    item_font_size=item_font_size,
-    bg_color=selected_bg,
+    body_font_size=body_font_size,
+    theme_name=theme_name,
     title_font_size=title_font_size,
 )
 
