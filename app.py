@@ -1,15 +1,14 @@
 import os
-import re
 import streamlit as st
 from PIL import Image
 from html2image import Html2Image
 
-# 若無安裝 pytesseract，則自動退回基礎處理，確保網頁絕不崩潰
+# 安全檢測 pytesseract 與系統工具
 try:
     import pytesseract
-    HAS_OCR = True
+    HAS_TESSERACT = True
 except ImportError:
-    HAS_OCR = False
+    HAS_TESSERACT = False
 
 st.set_page_config(
     page_title="羽球隊賽程圖片產生器",
@@ -229,7 +228,7 @@ def generate_poster_html(sub_title, main_title, tag_left, tag_right, date1_title
 # Streamlit UI 介面佈局
 # -----------------------------------------------------------------------------
 st.title("🏸 羽球隊賽程圖片產生器")
-st.caption("支援上傳圖片辨識文字、自訂標題與日期、修改錯字，並即時產出手機最佳化賽程圖案！")
+st.caption("支援上傳多張參考賽程圖片、自訂標題與日期、修改錯字，並即時產出手機最佳化賽程圖案！")
 
 # 側邊欄設定
 st.sidebar.header("⚙️ 1. 標題與版型設定")
@@ -240,23 +239,32 @@ tag_right = st.sidebar.text_input("右側標籤 (日期)", value="日期：2026/
 item_font_size = st.sidebar.slider("選手名字字體大小 (px)", min_value=12, max_value=24, value=16)
 
 st.sidebar.markdown("---")
-st.sidebar.header("📷 2. 上傳賽程圖片 (辨識文字)")
-uploaded_file = st.sidebar.file_uploader("選擇賽程圖片檔...", type=["jpg", "jpeg", "png"])
+st.sidebar.header("📷 2. 上傳多張賽程參考圖片")
+# 關鍵修改：accept_multiple_files=True 允許上傳多張圖片
+uploaded_files = st.sidebar.file_uploader("選擇多張賽程圖片檔...", type=["jpg", "jpeg", "png"], accept_multiple_files=True)
 
-if uploaded_file is not None:
-    st.sidebar.image(uploaded_file, caption="已上傳圖片", use_container_width=True)
-    if HAS_OCR:
+if uploaded_files:
+    st.sidebar.success(f"已成功上傳 {len(uploaded_files)} 張圖片")
+    # 讓使用者可以展開預覽多張圖片
+    with st.sidebar.expander("👁️ 檢視上傳的圖片清單"):
+        for i, file in enumerate(uploaded_files):
+            st.image(file, caption=f"圖 {i+1}: {file.name}", use_container_width=True)
+            
+    # OCR 安全處理
+    if HAS_TESSERACT:
         if st.sidebar.button("🔍 執行文字辨識 (OCR)"):
-            with st.spinner("正在辨識圖片中的文字..."):
-                try:
-                    img = Image.open(uploaded_file)
-                    ocr_result = pytesseract.image_to_string(img, lang="chi_tra+eng")
-                    st.sidebar.success("辨識完成！您可以複製下方文字至資料編輯區：")
-                    st.sidebar.text_area("辨識結果", value=ocr_result, height=150)
-                except Exception as e:
-                    st.sidebar.error(f"OCR 辨識失敗：{e}")
+            all_ocr_text = ""
+            with st.spinner("正在辨識多張圖片中的文字..."):
+                for file in uploaded_files:
+                    try:
+                        img = Image.open(file)
+                        text = pytesseract.image_to_string(img, lang="chi_tra+eng")
+                        all_ocr_text += f"\n--- 檔案: {file.name} ---\n" + text
+                    except Exception as e:
+                        all_ocr_text += f"\n--- 檔案 {file.name} 辨識失敗: {e} ---\n"
+                st.sidebar.text_area("辨識結果總覽", value=all_ocr_text, height=150)
     else:
-        st.sidebar.info("💡 系統支援直接輸入與修改文字。")
+        st.sidebar.info("💡 提示：雲端伺服器未安裝 Tesseract 系統核心，建議直接對照右側上傳的圖片在下方文字框中手動輸入或貼上調整賽程。")
 
 # 主要編輯區
 st.header("📝 3. 賽程資料編輯區 (可自由修改錯字與組別)")
@@ -321,5 +329,5 @@ with col_prev2:
                             mime="image/png"
                         )
             except Exception as e:
-                st.error(f"圖片產出失敗（伺服器可能缺少 Chromium 驅動）：{e}")
+                st.error(f"圖片產出失敗：{e}")
                 st.info("提示：若在雲端環境執行，亦可直接於左側視窗截圖預覽。")
