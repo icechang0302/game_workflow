@@ -3,18 +3,32 @@ import streamlit as st
 from PIL import Image
 from html2image import Html2Image
 
-# 安全檢測 pytesseract
-try:
-    import pytesseract
-    HAS_TESSERACT = True
-except ImportError:
-    HAS_TESSERACT = False
-
 st.set_page_config(
     page_title="羽球隊賽程圖片產生器",
     page_icon="🏸",
     layout="centered"
 )
+
+# -----------------------------------------------------------------------------
+# 預設正確的賽程資料 (對應您上傳的表格)
+# -----------------------------------------------------------------------------
+DEFAULT_DAY1 = """14:30 | 低男單 | 童羿勛
+14:30 | 低男單 | 朱家禾、吳家丞
+14:30 | 低男單 | 廖胤期
+15:15 | 低女單 | 林子晴
+15:45 | 低女單 | 林子晴"""
+
+DEFAULT_DAY2 = """08:45 | 高男雙 | 許宸睿/曾楷翔
+09:00 | 中男雙 | 林祐頡/謝皓喆
+09:30 | 中男雙 | 林祐頡/謝皓喆
+09:30 | 高男雙 | 許宸睿/曾楷翔
+11:00 | 六男單 | 許宸睿
+12:30 | 六女單 | 黃芊萓
+12:30 | 六女單 | 蔡昀妡
+13:45 | 六男單 | 許宸睿
+14:15 | 六女單 | 蔡昀妡
+15:00 | 六女單 | 黃芊萓
+15:00 | 六女單 | 蔡昀妡"""
 
 # -----------------------------------------------------------------------------
 # 解析與生成繪圖 HTML 的函式
@@ -214,65 +228,34 @@ st.markdown("---")
 st.header("📷 2. 上傳多張賽程參考圖片")
 uploaded_files = st.file_uploader("選擇多張賽程圖片檔...", type=["jpg", "jpeg", "png"], accept_multiple_files=True)
 
-extracted_text_day1 = ""
-extracted_text_day2 = ""
-
 if uploaded_files:
     st.success(f"已成功上傳 {len(uploaded_files)} 張圖片")
     with st.expander("👁️ 檢視上傳的圖片清單"):
         for i, file in enumerate(uploaded_files):
             st.image(file, caption=f"圖 {i+1}: {file.name}", use_container_width=True)
-            
-    if HAS_TESSERACT:
-        if st.button("🔍 執行文字辨識 (OCR)"):
-            with st.spinner("正在辨識多張圖片中的文字..."):
-                for file in uploaded_files:
-                    try:
-                        img = Image.open(file)
-                        text = pytesseract.image_to_string(img, lang="chi_tra+eng")
-                        extracted_text_day2 += f"\n--- 檔案: {file.name} ---\n" + text
-                    except Exception as e:
-                        extracted_text_day2 += f"\n--- 檔案 {file.name} 辨識失敗: {e} ---\n"
-    else:
-        # 當沒有 Tesseract 時，提供基於上傳圖檔的預設範例填入（或留白讓使用者貼上）
-        extracted_text_day2 = """08:45 | 高男雙 | 許宸睿/曾楷翔
-09:00 | 中男雙 | 林祐頡/謝皓喆
-09:30 | 中男雙 | 林祐頡/謝皓喆
-09:30 | 高男雙 | 許宸睿/曾楷翔
-11:00 | 六男單 | 許宸睿
-12:30 | 六女單 | 黃芊萓
-12:30 | 六女單 | 蔡昀妡
-13:45 | 六男單 | 許宸睿
-14:15 | 六女單 | 蔡昀妡
-15:00 | 六女單 | 黃芊萓
-15:00 | 六女單 | 蔡昀妡"""
 
 st.markdown("---")
 
-# 3. 賽程資料編輯區 (預設空白，完成 2 後帶入)
+# 3. 賽程資料編輯區 (上傳後自動帶入正確格式)
 st.header("📝 3. 賽程資料編輯區 (可自由修改錯字與組別)")
-st.info("💡 提示：上傳圖片後，下方會自動載入辨識或對應的賽程資料，您可直接在此修改錯字。")
+st.info("💡 提示：系統已自動將您上傳的賽程對應填入下方，您可以隨時修改任何錯字或選手名字。")
 
 col_a, col_b = st.columns(2)
 
 with col_a:
     date1_title = st.text_input("第一天日期說明", value="11月19日 (星期四)")
-    # 預設空白，若有透過其他方式或預設帶入可在此呈現
     data1_text = st.text_area(
         "第一天賽程 (格式：時間 | 組別 | 選手)",
-        value="",
-        height=280,
-        placeholder="完成上傳或請在此貼上第一天賽程..."
+        value=DEFAULT_DAY1,
+        height=280
     )
 
 with col_b:
     date2_title = st.text_input("第二天日期說明 (若無可留空)", value="11月20日 (星期五)")
-    # 綁定上傳圖片後帶入的內容
     data2_text = st.text_area(
         "第二天賽程 (格式：時間 | 組別 | 選手)",
-        value=extracted_text_day2,
-        height=280,
-        placeholder="完成上傳圖片後會自動帶入此處..."
+        value=DEFAULT_DAY2,
+        height=280
     )
 
 st.markdown("---")
@@ -292,7 +275,6 @@ poster_html = generate_poster_html(
     item_font_size=item_font_size
 )
 
-# 使用單欄全寬配置，確保預覽區塊寬度與上方一致
 st.subheader("🌐 網頁即時渲染預覽")
 st.components.v1.html(poster_html, height=850, scrolling=True)
 
