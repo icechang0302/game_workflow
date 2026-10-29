@@ -66,10 +66,9 @@ def generate_poster_html(sub_title, main_title, tag_left, tag_right, date1_title
     c19, count1 = parse_text_to_cards(data1_text)
     c20, count2 = parse_text_to_cards(data2_text)
 
-    # 根據總卡片數動態計算網頁總高度，確保內容再多也絕不被裁切
+    # 動態計算高度，並給予更寬裕的底部留白空間，確保絕不被裁切
     total_cards = max(count1, count2) if date2_title.strip() and data2_text.strip() else count1
-    # 每一行大約佔 90px，加上標題與留白空間
-    dynamic_height = max(1200, 350 + (total_cards * 95))
+    dynamic_height = max(1500, 400 + (total_cards * 105))
 
     html_content = f"""<!DOCTYPE html>
 <html>
@@ -85,7 +84,7 @@ def generate_poster_html(sub_title, main_title, tag_left, tag_right, date1_title
     font-family: 'Noto Sans TC', sans-serif;
     color: #ffffff;
     margin: 0;
-    padding: 40px 35px;
+    padding: 40px 35px 80px 35px; /* 底部增加留白 */
     width: 1050px;
     box-sizing: border-box;
     display: flex;
@@ -299,7 +298,7 @@ with st.expander("➕ 點此新增更多天數賽程 (若賽程超過兩天)"):
 
 st.markdown("---")
 
-# 4. 即時預覽與圖片下載 (採用動態計算高度，保證整張圖完整呈現絕不裁切)
+# 4. 即時預覽與圖片下載 (大幅提高預覽元件高度，保證完整呈現)
 st.header("🖼️ 4. 即時預覽與圖片下載")
 
 combined_day2_text = data2_text
@@ -321,8 +320,8 @@ poster_html, dynamic_height = generate_poster_html(
 )
 
 st.subheader("🌐 網頁即時渲染預覽 (完整呈現・防亂碼)")
-# 預覽元件高度會隨著動態內容完美延展
-st.components.v1.html(poster_html, height=dynamic_height, scrolling=False)
+# 將預覽高度設為 dynamic_height + 200，確保元件絕對足夠高，不被任何框架裁切
+st.components.v1.html(poster_html, height=dynamic_height + 200, scrolling=False)
 
 st.subheader("📥 匯出為高解析 PNG 圖片")
 if st.button("🚀 產出 PNG 圖片檔案", type="primary"):
@@ -330,8 +329,8 @@ if st.button("🚀 產出 PNG 圖片檔案", type="primary"):
         try:
             output_img_path = "generated_schedule.png"
             hti = Html2Image(output_path='.')
-            # 截圖尺寸的高度動態對應，確保下載的 PNG 完整不被切掉
-            hti.screenshot(html_str=poster_html, save_as=output_img_path, size=(1050, dynamic_height))
+            # 下載的 PNG 尺寸高度也同步採用動態計算值 + 100 留白
+            hti.screenshot(html_str=poster_html, save_as=output_img_path, size=(1050, dynamic_height + 100))
             
             if os.path.exists(output_img_path):
                 st.image(output_img_path, caption="已產出圖檔預覽", use_container_width=True)
