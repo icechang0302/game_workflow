@@ -11,14 +11,13 @@ st.set_page_config(
 )
 
 # -----------------------------------------------------------------------------
-# 初始化中文字型 (防止 Linux 雲端環境產生 □□□ 亂碼)
+# 初始化中文字型 (確保雲端 Linux 環境不產生 □□□ 亂碼)
 # -----------------------------------------------------------------------------
 @st.cache_resource
 def setup_chinese_font():
     font_path = "NotoSansTC-Regular.ttf"
     if not os.path.exists(font_path):
         try:
-            # 從開源專案下載思源黑體支援中文
             url = "https://github.com/google/fonts/raw/main/ofl/notosanstc/NotoSansTC-Regular.ttf"
             urllib.request.urlretrieve(url, font_path)
         except Exception:
@@ -34,7 +33,7 @@ if "day2_text" not in st.session_state:
     st.session_state["day2_text"] = ""
 
 # -----------------------------------------------------------------------------
-# 解析與生成繪圖 HTML 的函式
+# 解析與生成繪圖 HTML 的函式 (加寬版型 1050px，確保第四區夠寬、防亂碼)
 # -----------------------------------------------------------------------------
 def parse_text_to_cards(text):
     cards_html = ""
@@ -65,10 +64,11 @@ def parse_text_to_cards(text):
             """
     return cards_html
 
-def generate_poster_html(sub_title, main_title, tag_left, tag_right, date1_title, data1_text, date2_title, data2_text, item_font_size=16, bg_color="#0d1b2a", title_font_size=38):
+def generate_poster_html(sub_title, main_title, tag_left, tag_right, date1_title, data1_text, date2_title, data2_text, item_font_size=16, bg_color="#0d1b2a", title_font_size=40):
     c19 = parse_text_to_cards(data1_text)
     c20 = parse_text_to_cards(data2_text)
 
+    # 寬度從 960px 提升至 1050px，確保第四區寬敞舒適
     html_content = f"""<!DOCTYPE html>
 <html>
 <head>
@@ -83,8 +83,8 @@ def generate_poster_html(sub_title, main_title, tag_left, tag_right, date1_title
     font-family: 'Noto Sans TC', sans-serif;
     color: #ffffff;
     margin: 0;
-    padding: 35px 30px;
-    width: 960px;
+    padding: 40px 35px;
+    width: 1050px;
     box-sizing: border-box;
     display: flex;
     flex-direction: column;
@@ -92,85 +92,85 @@ def generate_poster_html(sub_title, main_title, tag_left, tag_right, date1_title
   }}
   .header {{
     text-align: center;
-    margin-bottom: 25px;
+    margin-bottom: 30px;
     width: 100%;
   }}
   .badge-icon {{
-    font-size: 36px;
-    margin-bottom: 6px;
+    font-size: 40px;
+    margin-bottom: 8px;
   }}
   .sub-title {{
     color: #cbd5e1;
-    font-size: 20px;
+    font-size: 21px;
     font-weight: 600;
   }}
   .main-title {{
     font-size: {title_font_size}px;
     font-weight: 800;
-    margin: 8px 0 14px 0;
+    margin: 10px 0 16px 0;
     color: #ffffff;
     letter-spacing: 1px;
   }}
   .tags {{
     display: flex;
     justify-content: center;
-    gap: 14px;
+    gap: 16px;
   }}
   .tag-yellow {{
     background-color: #f59e0b;
     color: #000;
     font-weight: bold;
-    padding: 6px 18px;
-    border-radius: 18px;
+    padding: 7px 20px;
+    border-radius: 20px;
     font-size: 16px;
   }}
   .tag-white {{
     background-color: #ffffff;
     color: #000;
     font-weight: bold;
-    padding: 6px 18px;
-    border-radius: 18px;
+    padding: 7px 20px;
+    border-radius: 20px;
     font-size: 16px;
   }}
   .section-container {{
     width: 100%;
-    max-width: 900px;
+    max-width: 980px;
   }}
   .section-title {{
     background-color: #1e3a8a;
     color: #ffffff;
     text-align: center;
-    font-size: 20px;
+    font-size: 21px;
     font-weight: bold;
-    padding: 12px;
+    padding: 13px;
     border-radius: 8px;
-    margin: 22px 0 14px 0;
+    margin: 25px 0 15px 0;
     border: 2px solid #3b82f6;
   }}
   .grid {{
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 14px;
+    gap: 16px;
     margin-bottom: 12px;
   }}
   .card {{
     background-color: #1e3a8a;
-    border-radius: 8px;
+    border-radius: 10px;
     overflow: hidden;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.4);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.4);
   }}
   .time-header {{
     background-color: #1e40af;
     text-align: center;
-    padding: 8px 0;
-    font-size: 18px;
+    padding: 9px 0;
+    font-size: 19px;
     font-weight: bold;
     color: #ffffff;
     border-bottom: 1px solid #2563eb;
   }}
   .content {{
     background-color: #ffffff;
-    padding: 12px 16px;
+    padding: 14px 18px;
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -245,7 +245,7 @@ with col_c2:
     item_font_size = st.slider("選手名字字體大小 (px)", min_value=12, max_value=24, value=16)
 
 with col_c3:
-    title_font_size = st.slider("主標題字體大小 (px)", min_value=28, max_value=48, value=38)
+    title_font_size = st.slider("主標題字體大小 (px)", min_value=28, max_value=48, value=40)
 
 st.markdown("---")
 
@@ -262,40 +262,42 @@ with st.expander("📋 點此查看/複製 AI 轉換指令"):
 
 st.markdown("---")
 
-# 3. 賽程資料編輯區 (改為全寬大單欄，高度放大至 650px，確保超寬且一眼看全)
+# 3. 賽程資料編輯區 (改回左右雙欄對稱，高度適中)
 st.header("📝 3. 賽程資料編輯區")
-st.info("💡 請將 AI 整理好的賽程文字直接貼入下方對應的日期欄位中（格式：時間 | 組別 | 選手）。")
+st.info("💡 請將 AI 整理好的賽程文字分別貼入下方對應的日期欄位中（格式：時間 | 組別 | 選手）。")
 
-date1_title = st.text_input("第一天日期說明", value="11月19日 (星期四)")
-data1_text = st.text_area(
-    "第一天賽程 (格式：時間 | 組別 | 選手)",
-    value=st.session_state["day1_text"],
-    height=650,  # 超寬超高，完美檢視整張圖
-    placeholder="例如：\n14:30 | 國小低年級 | 童羿勛\n14:30 | 國小低年級 | 朱家禾、吳家丞"
-)
+col_a, col_b = st.columns(2)
 
-st.markdown("---")
+with col_a:
+    date1_title = st.text_input("第一天日期說明", value="11月19日 (星期四)")
+    data1_text = st.text_area(
+        "第一天賽程 (格式：時間 | 組別 | 選手)",
+        value=st.session_state["day1_text"],
+        height=300,
+        placeholder="例如：\n14:30 | 國小低年級 | 童羿勛"
+    )
 
-date2_title = st.text_input("第二天日期說明 (若無可留空)", value="11月20日 (星期五)")
-data2_text = st.text_area(
-    "第二天賽程 (格式：時間 | 組別 | 選手)",
-    value=st.session_state["day2_text"],
-    height=650,  # 超寬超高，完美檢視整張圖
-    placeholder="例如：\n08:45 | 國小高年級男雙 | 許宸睿、曾楷翔"
-)
+with col_b:
+    date2_title = st.text_input("第二天日期說明 (若無可留空)", value="11月20日 (星期五)")
+    data2_text = st.text_area(
+        "第二天賽程 (格式：時間 | 組別 | 選手)",
+        value=st.session_state["day2_text"],
+        height=300,
+        placeholder="例如：\n08:45 | 國小高年級男雙 | 許宸睿、曾楷翔"
+    )
 
 with st.expander("➕ 點此新增更多天數賽程 (若賽程超過兩天)"):
     extra_date_title = st.text_input("額外天數日期說明", value="11月21日 (星期六)")
     extra_data_text = st.text_area(
         "額外天數賽程 (格式：時間 | 組別 | 選手)",
         value="",
-        height=200,
+        height=150,
         placeholder="10:00 | 決賽 | ..."
     )
 
 st.markdown("---")
 
-# 4. 即時預覽與圖片下載 (無捲動軸、字型完美防亂碼)
+# 4. 即時預覽與圖片下載 (寬版 1050px、防亂碼字型、無捲動軸)
 st.header("🖼️ 4. 即時預覽與圖片下載")
 
 combined_day2_text = data2_text
@@ -316,8 +318,8 @@ poster_html = generate_poster_html(
     title_font_size=title_font_size
 )
 
-st.subheader("🌐 網頁即時渲染預覽 (全寬無亂碼優化)")
-st.components.v1.html(poster_html, height=2200, scrolling=False)
+st.subheader("🌐 網頁即時渲染預覽 (寬版 1050px・防亂碼)")
+st.components.v1.html(poster_html, height=2100, scrolling=False)
 
 st.subheader("📥 匯出為高解析 PNG 圖片")
 if st.button("🚀 產出 PNG 圖片檔案", type="primary"):
@@ -325,7 +327,8 @@ if st.button("🚀 產出 PNG 圖片檔案", type="primary"):
         try:
             output_img_path = "generated_schedule.png"
             hti = Html2Image(output_path='.')
-            hti.screenshot(html_str=poster_html, save_as=output_img_path, size=(1000, 2600))
+            # 截圖尺寸同步放大至 1050px 寬，確保 PNG 檔案清晰不變形且不亂碼
+            hti.screenshot(html_str=poster_html, save_as=output_img_path, size=(1050, 2400))
             
             if os.path.exists(output_img_path):
                 st.image(output_img_path, caption="已產出圖檔預覽", use_container_width=True)
