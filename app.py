@@ -48,7 +48,7 @@ def get_font_base64():
         return ""
 
 # -----------------------------------------------------------------------------
-# Session State 初始化
+# Session State 初始化 (個人賽程文字預設為空白，不寫死)
 # -----------------------------------------------------------------------------
 if "mode" not in st.session_state:
     st.session_state["mode"] = "整體流程表"
@@ -57,35 +57,9 @@ if "day1_text" not in st.session_state:
 if "day2_text" not in st.session_state:
     st.session_state["day2_text"] = ""
 if "p_day1_text" not in st.session_state:
-    st.session_state["p_day1_text"] = """低年級
-男  童羿勛 (低男單) : 12:00、14:30
-男  謝皓喆 (低男單) : 12:00
-男  廖胤期 (低男單) : 12:15、14:30
-男  吳家丞 (低男單) : 14:30
-女  林子晴 (低女單) : 15:15、15:45
-
-中年級
-男  林祐頡 (中男單) : 08:45、10:00
-男  謝皓宇 (中男單) : 10:00、11:15
-女  吳雨恩 (中女單) : 11:45、13:00
-女  凃萬希 (中女單) : 12:00、13:15
-
-高年級
-男  張智勛 (高男單) : 08:00、10:30
-男  謝翔宇 (高男單) : 08:00、09:15
-男  林靖洋 (高男單) : 09:15、10:30
-男  曾楷翔 (高男單) : 09:30、10:45"""
-
+    st.session_state["p_day1_text"] = ""
 if "p_day2_text" not in st.session_state:
-    st.session_state["p_day2_text"] = """中年級
-男  林祐頡 (中男雙) : 09:00、09:30
-男  謝皓喆 (中男雙) : 09:00、09:30
-
-高年級
-男  曾楷翔 (高男雙) : 08:45、09:30
-男  許宸睿 (高男單/高男雙) : 08:45、09:30、11:00、13:45
-女  黃芊萱 (高女單) : 12:30、15:00
-女  蔡昀忻 (高女單) : 12:30、14:15、15:00"""
+    st.session_state["p_day2_text"] = ""
 
 # -----------------------------------------------------------------------------
 # 解析模式 1：整體流程表文字 → 卡片 HTML
@@ -137,7 +111,7 @@ def parse_text_to_cards(text):
     return cards_html, len(order)
 
 # -----------------------------------------------------------------------------
-# 解析模式 2：選手個人賽程文字 → 分組區塊 HTML
+# 解析模式 2：選手個人賽程文字 → 分組區塊 HTML (選手與時間連起來置左)
 # -----------------------------------------------------------------------------
 def parse_personal_text(text):
     sections = {} 
@@ -181,12 +155,11 @@ def parse_personal_text(text):
             
             gender_class = "gender-f" if gender == "女" else "gender-m"
             
+            # 選手與時間連起來置左排版
             rows_html += f"""
             <div class="p-row">
               <span class="gender-badge {gender_class}">{gender}</span>
-              <span class="p-info">{html_lib.escape(name_cate)}</span>
-              <span class="p-colon">:</span>
-              <span class="p-time">{html_lib.escape(time_part)}</span>
+              <span class="p-main-text">{html_lib.escape(name_cate)} : {html_lib.escape(time_part)}</span>
             </div>
             """
             
@@ -402,7 +375,7 @@ def generate_poster_html(sub_title, main_title, tag_left, tag_right,
   .cate-m {{ color: {theme['male']}; font-weight: 800; }}
   .cate-f {{ color: {FEMALE_COLOR}; font-weight: 800; }}
 
-  /* 個人賽程專屬樣式 */
+  /* 個人賽程專屬樣式 (選手與時間連起來置左) */
   .p-main-date {{
     font-size: {body_font_size + 4}px; font-weight: 800; color: {ACCENT_YELLOW};
     text-align: center; margin: 30px 0 14px 0; letter-spacing: 1px;
@@ -428,9 +401,7 @@ def generate_poster_html(sub_title, main_title, tag_left, tag_right,
   }}
   .gender-m {{ background-color: {theme['tag_m_bg']}; color: {theme['tag_m_fg']}; }}
   .gender-f {{ background-color: {theme['tag_f_bg']}; color: {theme['tag_f_fg']}; }}
-  .p-info {{ flex: 1; }}
-  .p-colon {{ margin: 0 8px; color: #64748b; }}
-  .p-time {{ color: #0f172a; font-weight: 800; }}
+  .p-main-text {{ flex: 1; text-align: left; }}
 </style>
 </head>
 <body>
@@ -523,15 +494,15 @@ else:
 
 col_a, col_b = st.columns(2)
 with col_a:
-    date1_title = st.text_input("第一天日期說明 (不需要可留空)", value="【2026-11-19】" if st.session_state["mode"] == "選手個人賽程" else "")
+    date1_title = st.text_input("第一天日期說明 (不需要可留空)", value="")
     data1_text = st.text_area(
         "第一天賽程",
         value=st.session_state["day1_text"] if st.session_state["mode"] == "整體流程表" else st.session_state["p_day1_text"],
         height=320,
-        placeholder="例如：\n09:00 ｜ 低男單 ｜ 王大明"
+        placeholder="例如：\n低年級\n男  童羿勛 (低男單) : 12:00、14:30"
     )
 with col_b:
-    date2_title = st.text_input("第二天日期說明 (若無可留空)", value="【2026-11-20】" if st.session_state["mode"] == "選手個人賽程" else "")
+    date2_title = st.text_input("第二天日期說明 (若無可留空)", value="")
     data2_text = st.text_area(
         "第二天賽程 (若無可留空)",
         value=st.session_state["day2_text"] if st.session_state["mode"] == "整體流程表" else st.session_state["p_day2_text"],
