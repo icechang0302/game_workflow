@@ -9,9 +9,9 @@ from PIL import Image, ImageChops
 from html2image import Html2Image
 
 st.set_page_config(
-    page_title="羽球隊賽程圖片產生器",
+    page_title="羽球隊賽程圖片產生器 (雙表同步)",
     page_icon="🏸",
-    layout="centered"
+    layout="wide"  # 改為寬螢幕版面，方便左右並排預覽兩張海報
 )
 
 POSTER_WIDTH = 1080      # 海報固定寬度 (px)
@@ -50,15 +50,13 @@ def get_font_base64():
 # -----------------------------------------------------------------------------
 # Session State 初始化
 # -----------------------------------------------------------------------------
-if "mode" not in st.session_state:
-    st.session_state["mode"] = "整體流程表"
-if "schedule_text" not in st.session_state:
-    st.session_state["schedule_text"] = ""
-if "p_schedule_text" not in st.session_state:
-    st.session_state["p_schedule_text"] = ""
+if "general_text" not in st.session_state:
+    st.session_state["general_text"] = ""
+if "personal_text" not in st.session_state:
+    st.session_state["personal_text"] = ""
 
 # -----------------------------------------------------------------------------
-# 解析模式 1：整體流程表文字 → 卡片 HTML
+# 解析整體流程表文字 → 卡片 HTML
 # -----------------------------------------------------------------------------
 def parse_text_to_cards(text):
     groups = {}   
@@ -107,10 +105,9 @@ def parse_text_to_cards(text):
     return cards_html, len(order)
 
 # -----------------------------------------------------------------------------
-# 解析模式 2：選手個人賽程文字 (支援多天區塊整合解析)
+# 解析選手個人賽程文字 (支援多天區塊整合解析)
 # -----------------------------------------------------------------------------
 def parse_personal_integrated_text(text):
-    # 透過日期標題 (例如 【2026-11-19】 或 9月28日) 將整段文字拆成多個天數區塊
     blocks = []
     current_date_title = ""
     current_lines = []
@@ -120,7 +117,6 @@ def parse_personal_integrated_text(text):
         raw_l = line.strip()
         if not raw_l:
             continue
-        # 判斷是否為日期標題列 (包含 【】 或 包含日期字眼且無冒號)
         if ("【" in raw_l and "】" in raw_l) or ("月" in raw_l and ":" not in raw_l and "｜" not in raw_l and "|" not in raw_l and "男" not in raw_l and "女" not in raw_l):
             if current_lines or current_date_title:
                 blocks.append((current_date_title, current_lines))
@@ -136,11 +132,9 @@ def parse_personal_integrated_text(text):
     total_metric = 0
 
     for date_title, block_lines in blocks:
-        # 處理日期標題
         if date_title:
             full_html += f'<div class="p-main-date">{html_lib.escape(date_title)}</div>'
             
-        # 處理該天底下的分組與選手
         sections = {}
         sec_order = []
         current_sec = "選手個人賽程"
@@ -443,32 +437,21 @@ def render_png(html_str, total_metric, out_path="generated_schedule.png"):
     return out_path
 
 # -----------------------------------------------------------------------------
-# 主畫面
+# 主畫面 (四個區塊完美整合)
 # -----------------------------------------------------------------------------
-st.title("🏸 羽球隊賽程圖片產生器")
-st.write(f"請依照下方步驟，選擇海報產出模式並貼入對應文字，即可即時產出 {POSTER_WIDTH}px 寬的完整海報。")
+st.title("🏸 羽球隊賽程圖片產生器 (雙表同步產出)")
+st.write(f"請依照下方步驟設定共用樣式與填入兩份賽程資料，系統將同時產出**整體流程表**與**選手個人賽程**兩張完整海報！")
 
-# 模式切換器
-st.session_state["mode"] = st.radio(
-    "📌 選擇海報產出模式",
-    ["整體流程表", "選手個人賽程"],
-    horizontal=True
-)
-
-st.markdown("---")
-st.header("⚙️ 1. 標題、版型與樣式設定")
-st.caption("💡 提示：標題、副標題與標籤欄位皆為選填，若不需要可直接留空，海報對應區塊將自動隱藏。")
-
+# 1. 標題、版型與樣式設定
+st.header("⚙️ 1. 標題、版型與樣式設定 (兩張表共用)")
 col_s1, col_s2 = st.columns(2)
 with col_s1:
-    default_main = "MAUC 秋季賽"
-    main_title = st.text_input("主標題 (選填)", value=default_main)
-    
-    default_tag_l = "整體流程表" if st.session_state["mode"] == "整體流程表" else "選手個人賽程"
-    tag_left = st.text_input("左側標籤 (選填)", value=default_tag_l)
-with col_s2:
+    main_title = st.text_input("主標題 (選填)", value="MAUC 秋季賽")
     sub_title = st.text_input("副標題 / 隊伍名稱 (選填)", value="2026年牧羽盃全國四季聯賽")
+with col_s2:
     tag_right = st.text_input("右側標籤 / 日期 (選填)", value="日期：2026/09/28（一）")
+    tag_left_gen = st.text_input("整體流程表左側標籤", value="整體流程表")
+    tag_left_per = st.text_input("選手個人賽程左側標籤", value="選手個人賽程")
 
 col_c1, col_c2, col_c3 = st.columns(3)
 with col_c1:
@@ -480,69 +463,86 @@ with col_c3:
 
 st.markdown("---")
 
-# 整合後的單一文字輸入區
-if st.session_state["mode"] == "整體流程表":
-    st.header("📝 3. 賽程資料編輯區 (整體流程表)")
-    st.info("💡 格式：時間 ｜ 組別 ｜ 選手（全半形皆可）。")
-    schedule_text = st.text_area(
-        "賽程內容 (可包含多天資料)",
-        value=st.session_state["schedule_text"],
-        height=380,
+# 2 & 3. 賽程資料編輯區 (左右並排輸入)
+col_input1, col_input2 = st.columns(2)
+
+with col_input1:
+    st.header("📝 2. 賽程資料編輯區 (整體流程表)")
+    st.info("💡 格式：時間 ｜ 組別 ｜ 選手")
+    general_text = st.text_area(
+        "整體流程表內容",
+        value=st.session_state["general_text"],
+        height=350,
         placeholder="例如：\n09:00 ｜ 低男單 ｜ 王大明"
     )
-else:
-    st.header("📝 3. 賽程資料編輯區 (選手個人賽程)")
-    st.info("💡 提示：您可以在同一個框內直接貼入多天資料，只需用 `【2026-11-19】` 或日期作為區隔。")
-    schedule_text = st.text_area(
-        "選手個人賽程內容 (支援多天整合)",
-        value=st.session_state["p_schedule_text"],
-        height=380,
-        placeholder="【2026-11-19】\n低年級\n男  童羿勛 (低男單) : 12:00、14:30\n\n【2026-11-20】\n中年級\n男  林祐頡 (中男雙) : 09:00"
-    )
+    st.session_state["general_text"] = general_text
 
-# 儲存回 session state
-if st.session_state["mode"] == "整體流程表":
-    st.session_state["schedule_text"] = schedule_text
-else:
-    st.session_state["p_schedule_text"] = schedule_text
+with col_input2:
+    st.header("📝 3. 賽程資料編輯區 (選手個人賽程)")
+    st.info("💡 格式：分類標題換行後接 `男/女 選手姓名 (組別) : 時間`")
+    personal_text = st.text_area(
+        "選手個人賽程內容",
+        value=st.session_state["personal_text"],
+        height=350,
+        placeholder="【2026-11-19】\n低年級\n男  童羿勛 (低男單) : 12:00、14:30"
+    )
+    st.session_state["personal_text"] = personal_text
 
 st.markdown("---")
-st.header("🖼️ 4. 即時預覽與圖片下載")
 
-poster_kwargs = dict(
-    sub_title=sub_title,
-    main_title=main_title,
-    tag_left=tag_left,
-    tag_right=tag_right,
-    schedule_text=schedule_text,
-    body_font_size=body_font_size,
-    theme_name=theme_name,
-    title_font_size=title_font_size,
-    mode=st.session_state["mode"],
+# 4. 即時預覽與圖片下載 (左右並排呈現兩張海報)
+st.header("🖼️ 4. 即時預覽與圖片下載 (左右兩張)")
+
+col_prev1, col_prev2 = st.columns(2)
+
+# --- 生成整體流程表資料 ---
+kwargs_gen = dict(
+    sub_title=sub_title, main_title=main_title,
+    tag_left=tag_left_gen, tag_right=tag_right,
+    schedule_text=general_text, body_font_size=body_font_size,
+    theme_name=theme_name, title_font_size=title_font_size,
+    mode="整體流程表"
 )
 
-preview_html, total_metric = generate_poster_html(preview=True, **poster_kwargs)
+# --- 生成選手個人賽程資料 ---
+kwargs_per = dict(
+    sub_title=sub_title, main_title=main_title,
+    tag_left=tag_left_per, tag_right=tag_right,
+    schedule_text=personal_text, body_font_size=body_font_size,
+    theme_name=theme_name, title_font_size=title_font_size,
+    mode="選手個人賽程"
+)
 
-st.subheader("🌐 網頁即時預覽 (自動縮放符合畫面・無捲動軸)")
-st.components.v1.html(preview_html, height=900, scrolling=False)
+with col_prev1:
+    st.subheader("🌐 【整體流程表】預覽")
+    if general_text.strip():
+        html_g_prev, metric_g = generate_poster_html(preview=True, **kwargs_gen)
+        st.components.v1.html(html_g_prev, height=750, scrolling=False)
+        
+        if st.button("🚀 產出【整體流程表】PNG 圖片", type="primary", key="btn_g"):
+            with st.spinner("正在轉換為高解析圖片..."):
+                html_g_png, metric_g = generate_poster_html(preview=False, **kwargs_gen)
+                path_g = render_png(html_g_png, metric_g, out_path="general_schedule.png")
+                if os.path.exists(path_g):
+                    st.image(path_g, caption="整體流程表產出預覽", use_container_width=True)
+                    with open(path_g, "rb") as f:
+                        st.download_button("⬇️ 下載整體流程表 (PNG)", data=f, file_name="整體流程表.png", mime="image/png", key="dl_g")
+    else:
+        st.info("請在上方第 2 區填入整體流程表資料以顯示預覽。")
 
-st.subheader("📥 匯出為高解析 PNG 圖片")
-st.caption(f"下載的圖片與上方預覽使用同一份版面，完整 {POSTER_WIDTH}px 寬、高度依內容自動裁切。")
-
-if st.button("🚀 產出 PNG 圖片檔案", type="primary"):
-    with st.spinner(f"正在轉換為 {POSTER_WIDTH}px 高解析圖片..."):
-        try:
-            png_html, total_metric = generate_poster_html(preview=False, **poster_kwargs)
-            out_path = render_png(png_html, total_metric)
-            if os.path.exists(out_path):
-                st.image(out_path, caption=f"已產出圖檔預覽 ({POSTER_WIDTH}px 寬)", use_container_width=True)
-                with open(out_path, "rb") as file:
-                    file_name_prefix = main_title if main_title.strip() else "羽球隊賽程表"
-                    st.download_button(
-                        label="⬇️ 點此下載圖檔 (PNG)",
-                        data=file,
-                        file_name=f"{file_name_prefix}_{st.session_state['mode']}.png",
-                        mime="image/png"
-                    )
-        except Exception as e:
-            st.error(f"圖片產出失敗：{e}")
+with col_prev2:
+    st.subheader("🌐 【選手個人賽程】預覽")
+    if personal_text.strip():
+        html_p_prev, metric_p = generate_poster_html(preview=True, **kwargs_per)
+        st.components.v1.html(html_p_prev, height=750, scrolling=False)
+        
+        if st.button("🚀 產出【選手個人賽程】PNG 圖片", type="primary", key="btn_p"):
+            with st.spinner("正在轉換為高解析圖片..."):
+                html_p_png, metric_p = generate_poster_html(preview=False, **kwargs_per)
+                path_p = render_png(html_p_png, metric_p, out_path="personal_schedule.png")
+                if os.path.exists(path_p):
+                    st.image(path_p, caption="選手個人賽程產出預覽", use_container_width=True)
+                    with open(path_p, "rb") as f:
+                        st.download_button("⬇️ 下載選手個人賽程 (PNG)", data=f, file_name="選手個人賽程.png", mime="image/png", key="dl_p")
+    else:
+        st.info("請在上方第 3 區填入選手個人賽程資料以顯示預覽。")
