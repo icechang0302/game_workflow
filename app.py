@@ -57,9 +57,7 @@ if "day1_text" not in st.session_state:
 if "day2_text" not in st.session_state:
     st.session_state["day2_text"] = ""
 if "p_day1_text" not in st.session_state:
-    st.session_state["p_day1_text"] = """【2026-11-19】
-
-低年級
+    st.session_state["p_day1_text"] = """低年級
 男  童羿勛 (低男單) : 12:00、14:30
 男  謝皓喆 (低男單) : 12:00
 男  廖胤期 (低男單) : 12:15、14:30
@@ -79,9 +77,7 @@ if "p_day1_text" not in st.session_state:
 男  曾楷翔 (高男單) : 09:30、10:45"""
 
 if "p_day2_text" not in st.session_state:
-    st.session_state["p_day2_text"] = """【2026-11-20】
-
-中年級
+    st.session_state["p_day2_text"] = """中年級
 男  林祐頡 (中男雙) : 09:00、09:30
 男  謝皓喆 (中男雙) : 09:00、09:30
 
@@ -141,10 +137,10 @@ def parse_text_to_cards(text):
     return cards_html, len(order)
 
 # -----------------------------------------------------------------------------
-# 解析模式 2：選手個人賽程文字 → 分组區塊 HTML
+# 解析模式 2：選手個人賽程文字 → 分組區塊 HTML
 # -----------------------------------------------------------------------------
 def parse_personal_text(text):
-    sections = {} # section_name -> list of lines
+    sections = {} 
     sec_order = []
     current_sec = "選手個人賽程"
     
@@ -153,7 +149,6 @@ def parse_personal_text(text):
         raw_l = line.strip()
         if not raw_l:
             continue
-        # 檢查是否為大標題分類 (例如 低年級、中年級、高年級 或 【2026-11-19】)
         if not (":" in raw_l or "｜" in raw_l or "|" in raw_l or "男" in raw_l or "女" in raw_l):
             current_sec = raw_l.replace("【", "").replace("】", "")
             if current_sec not in sections:
@@ -177,13 +172,12 @@ def parse_personal_text(text):
         
         rows_html = ""
         for item in items:
-            # 格式範例：男  童羿勛 (低男單) : 12:00、14:30
             parts = item.split(":", 1)
             left_part = parts[0].strip()
             time_part = parts[1].strip() if len(parts) > 1 else ""
             
             gender = "男" if left_part.startswith("男") else "女"
-            name_cate = left_part[1:].strip() # 剩下 童羿勛 (低男單)
+            name_cate = left_part[1:].strip() 
             
             gender_class = "gender-f" if gender == "女" else "gender-m"
             
@@ -205,14 +199,21 @@ def parse_personal_text(text):
     return result_html, total_items
 
 # -----------------------------------------------------------------------------
-# 羽球圖示 (黃色)
+# 羽球拍與羽球組合專屬圖示 (黃色)
 # -----------------------------------------------------------------------------
 def badge_svg(bg):
-    return f"""<svg width="46" height="76" viewBox="0 0 48 80" xmlns="http://www.w3.org/2000/svg">
-  <path d="M9 4 H39 L31 58 H17 Z" fill="{ACCENT_YELLOW}"/>
-  <path d="M10 18 H38 M12.5 32 H35.5 M14.5 46 H33.5 M17.5 4 L20.5 58 M24 4 V58 M30.5 4 L27.5 58"
-        stroke="{bg}" stroke-width="2.6" fill="none"/>
-  <circle cx="24" cy="68" r="7" fill="none" stroke="{ACCENT_YELLOW}" stroke-width="4"/>
+    return f"""<svg width="68" height="76" viewBox="0 0 68 76" xmlns="http://www.w3.org/2000/svg">
+  <!-- 羽球拍外框與網線 -->
+  <ellipse cx="24" cy="26" rx="15" ry="19" fill="none" stroke="{ACCENT_YELLOW}" stroke-width="3.5"/>
+  <path d="M17 14 L17 38 M31 14 L31 38 M10 20 L38 20 M10 32 L38 32" stroke="{bg}" stroke-width="1.5" opacity="0.8"/>
+  <path d="M24 45 L24 68" stroke="{ACCENT_YELLOW}" stroke-width="3.5" stroke-linecap="round"/>
+  <path d="M22 56 L26 56 M21 61 L27 61" stroke="{bg}" stroke-width="2"/>
+  
+  <!-- 羽毛球 (Shuttlecock) -->
+  <path d="M46 26 L58 22 L54 42 L44 39 Z" fill="{ACCENT_YELLOW}"/>
+  <circle cx="49" cy="42" r="3.5" fill="{ACCENT_YELLOW}"/>
+  <path d="M47 28 L55 25" stroke="{bg}" stroke-width="1.5"/>
+  <path d="M48 33 L56 30" stroke="{bg}" stroke-width="1.5"/>
 </svg>"""
 
 # -----------------------------------------------------------------------------
@@ -229,9 +230,11 @@ def generate_poster_html(sub_title, main_title, tag_left, tag_right,
         c1, count1 = parse_text_to_cards(data1_text)
         show_day2 = bool(data2_text.strip())
         c2, count2 = parse_text_to_cards(data2_text) if show_day2 else ("", 0)
+        
         title1_html = (f'<div class="section-title">{html_lib.escape(date1_title)}</div>' if date1_title.strip() else "")
         title2_html = (f'<div class="section-title">{html_lib.escape(date2_title)}</div>' if date2_title.strip() else "")
         day2_html = (f'{title2_html}<div class="grid">{c2}</div>' if show_day2 else "")
+        
         body_content = f"""
   <div class="section-container">
     {title1_html}
@@ -240,13 +243,22 @@ def generate_poster_html(sub_title, main_title, tag_left, tag_right,
   </div>"""
         total_metric = count1 + count2
     else:
-        # 選手個人賽程模式：將 day1 與 day2 合併解析
-        full_p_text = data1_text + "\n" + data2_text
-        body_content_html, total_metric = parse_personal_text(full_p_text)
+        title1_html = (f'<div class="p-main-date">{html_lib.escape(date1_title)}</div>' if date1_title.strip() else "")
+        c1_html, count1 = parse_personal_text(data1_text) if data1_text.strip() else ("", 0)
+        
+        show_day2 = bool(data2_text.strip())
+        title2_html = (f'<div class="p-main-date">{html_lib.escape(date2_title)}</div>' if (show_day2 and date2_title.strip()) else "")
+        c2_html, count2 = parse_personal_text(data2_text) if show_day2 else ("", 0)
+        
+        day2_block = f"{title2_html}{c2_html}" if show_day2 else ""
+        
         body_content = f"""
   <div class="section-container">
-    {body_content_html}
+    {title1_html}
+    {c1_html}
+    {day2_block}
   </div>"""
+        total_metric = count1 + count2
 
     sub_title = html_lib.escape(sub_title)
     main_title = html_lib.escape(main_title)
@@ -391,10 +403,14 @@ def generate_poster_html(sub_title, main_title, tag_left, tag_right,
   .cate-f {{ color: {FEMALE_COLOR}; font-weight: 800; }}
 
   /* 個人賽程專屬樣式 */
+  .p-main-date {{
+    font-size: {body_font_size + 4}px; font-weight: 800; color: {ACCENT_YELLOW};
+    text-align: center; margin: 30px 0 14px 0; letter-spacing: 1px;
+  }}
   .p-section-title {{
     background-color: {theme['header']}; color: #ffffff; text-align: center;
     font-size: {body_font_size}px; font-weight: 700; padding: 16px;
-    border-radius: 12px; margin: 26px 0 16px 0;
+    border-radius: 12px; margin: 20px 0 14px 0;
   }}
   .p-box {{
     background-color: #ffffff; border-radius: 14px; overflow: hidden;
@@ -478,7 +494,7 @@ st.caption("💡 提示：標題、副標題與標籤欄位皆為選填，若不
 
 col_s1, col_s2 = st.columns(2)
 with col_s1:
-    default_main = "MAUC 秋季賽" if st.session_state["mode"] == "整體流程表" else "MAUC 秋季賽"
+    default_main = "MAUC 秋季賽"
     main_title = st.text_input("主標題 (選填)", value=default_main)
     
     default_tag_l = "整體流程表" if st.session_state["mode"] == "整體流程表" else "選手個人賽程"
@@ -497,50 +513,50 @@ with col_c3:
 
 st.markdown("---")
 
-# 根據不同模式顯示對應的編輯區
+# 資料編輯區
 if st.session_state["mode"] == "整體流程表":
     st.header("📝 3. 賽程資料編輯區 (整體流程表)")
     st.info("💡 格式：時間 ｜ 組別 ｜ 選手（全半形皆可）。同時間且**同組別**的多筆選手會自動合併在同一行。")
-
-    col_a, col_b = st.columns(2)
-    with col_a:
-        date1_title = st.text_input("第一天日期說明 (不需要可留空)", value="")
-        data1_text = st.text_area(
-            "第一天賽程 (格式：時間 ｜ 組別 ｜ 選手)",
-            value=st.session_state["day1_text"],
-            height=300,
-            placeholder="例如：\n09:00 ｜ 低男單 ｜ 王大明"
-        )
-    with col_b:
-        date2_title = st.text_input("第二天日期說明 (若無可留空)", value="")
-        data2_text = st.text_area(
-            "第二天賽程 (格式：時間 ｜ 組別 ｜ 選手)",
-            value=st.session_state["day2_text"],
-            height=300,
-            placeholder="若無第二天請保持空白..."
-        )
 else:
-    st.header("📝 3. 選手個人賽程資料編輯區")
-    st.info("💡 格式支援類似範例的結構（包含日期區塊、分組標題與選手時間）。")
+    st.header("📝 3. 賽程資料編輯區 (選手個人賽程)")
+    st.info("💡 格式：分類標題 (如 低年級) 換行後接 `男/女 選手姓名 (組別) : 時間`。")
 
-    col_a, col_b = st.columns(2)
-    with col_a:
-        date1_title = "" # 整合在文字內
-        data1_text = st.text_area(
-            "第一天 / 選手個人賽程文字",
-            value=st.session_state["p_day1_text"],
-            height=350,
-        )
-    with col_b:
-        date2_title = ""
-        data2_text = st.text_area(
-            "第二天 / 選手個人賽程文字 (若無可留空)",
-            value=st.session_state["p_day2_text"],
-            height=350,
-        )
+col_a, col_b = st.columns(2)
+with col_a:
+    date1_title = st.text_input("第一天日期說明 (不需要可留空)", value="【2026-11-19】" if st.session_state["mode"] == "選手個人賽程" else "")
+    data1_text = st.text_area(
+        "第一天賽程",
+        value=st.session_state["day1_text"] if st.session_state["mode"] == "整體流程表" else st.session_state["p_day1_text"],
+        height=320,
+        placeholder="例如：\n09:00 ｜ 低男單 ｜ 王大明"
+    )
+with col_b:
+    date2_title = st.text_input("第二天日期說明 (若無可留空)", value="【2026-11-20】" if st.session_state["mode"] == "選手個人賽程" else "")
+    data2_text = st.text_area(
+        "第二天賽程 (若無可留空)",
+        value=st.session_state["day2_text"] if st.session_state["mode"] == "整體流程表" else st.session_state["p_day2_text"],
+        height=320,
+        placeholder="若無第二天請保持空白..."
+    )
+
+with st.expander("➕ 點此新增更多天數賽程 (若賽程超過兩天)"):
+    extra_date_title = st.text_input("額外天數日期說明", value="")
+    extra_data_text = st.text_area(
+        "額外天數賽程",
+        value="",
+        height=150,
+        placeholder="10:00 ｜ 決賽 ｜ ..."
+    )
 
 st.markdown("---")
 st.header("🖼️ 4. 即時預覽與圖片下載")
+
+combined_data2 = data2_text
+if extra_date_title.strip() and extra_data_text.strip():
+    if st.session_state["mode"] == "整體流程表":
+        combined_data2 += f"\n{extra_data_text}"
+    else:
+        combined_data2 += f"\n\n{extra_date_title}\n{extra_data_text}"
 
 poster_kwargs = dict(
     sub_title=sub_title,
@@ -550,7 +566,7 @@ poster_kwargs = dict(
     date1_title=date1_title,
     data1_text=data1_text,
     date2_title=date2_title,
-    data2_text=data2_text,
+    data2_text=combined_data2,
     body_font_size=body_font_size,
     theme_name=theme_name,
     title_font_size=title_font_size,
