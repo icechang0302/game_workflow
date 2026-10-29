@@ -11,7 +11,7 @@ st.set_page_config(
 )
 
 # -----------------------------------------------------------------------------
-# 初始化中文字型 (確保雲端 Linux 環境不產生 □□□ 亂碼)
+# 初始化中文字型 (確保雲端環境不產生 □□□ 亂碼)
 # -----------------------------------------------------------------------------
 @st.cache_resource
 def setup_chinese_font():
@@ -33,13 +33,16 @@ if "day2_text" not in st.session_state:
     st.session_state["day2_text"] = ""
 
 # -----------------------------------------------------------------------------
-# 解析與生成繪圖 HTML 的函式
+# 解析與生成繪圖 HTML 的函式 (同時支援半形 | 與全形 ｜ 分隔符號)
 # -----------------------------------------------------------------------------
 def parse_text_to_cards(text):
     cards_html = ""
     lines = [l.strip() for l in text.strip().split("\n") if l.strip()]
     for line in lines:
-        parts = [p.strip() for p in line.split("|")]
+        # 將全形分隔符號 ｜ 統一轉為半形 |，避免使用者貼上時符號不合
+        normalized_line = line.replace("｜", "|")
+        parts = [p.strip() for p in normalized_line.split("|")]
+        
         if len(parts) >= 3:
             time_str, cate, players = parts[0], parts[1], parts[2]
             cards_html += f"""
@@ -66,7 +69,6 @@ def generate_poster_html(sub_title, main_title, tag_left, tag_right, date1_title
     c19, count1 = parse_text_to_cards(data1_text)
     c20, count2 = parse_text_to_cards(data2_text)
 
-    # 計算總行數以決定動態高度
     total_cards = max(count1, count2) if date2_title.strip() and data2_text.strip() else count1
     dynamic_height = max(1600, 500 + (total_cards * 110))
 
@@ -265,23 +267,23 @@ st.markdown("---")
 
 # 3. 賽程資料編輯區
 st.header("📝 3. 賽程資料編輯區")
-st.info("💡 請將 AI 整理好的賽程文字分別貼入下方對應的日期欄位中（格式：時間 | 組別 | 選手）。")
+st.info("💡 請將 AI 整理好的賽程文字分別貼入下方對應的日期欄位中（格式：時間 ｜ 組別 ｜ 選手，全半形皆可）。")
 
 col_a, col_b = st.columns(2)
 
 with col_a:
     date1_title = st.text_input("第一天日期說明", value="9月28日 (星期一)")
     data1_text = st.text_area(
-        "第一天賽程 (格式：時間 | 組別 | 選手)",
+        "第一天賽程 (格式：時間 ｜ 組別 ｜ 選手)",
         value=st.session_state["day1_text"],
         height=300,
-        placeholder="例如：\n09:00 | 國小低年級 | 童羿勛、謝皓喆"
+        placeholder="例如：\n09:00 ｜ 國小一 ｜ 王大明"
     )
 
 with col_b:
     date2_title = st.text_input("第二天日期說明 (若無可留空)", value="")
     data2_text = st.text_area(
-        "第二天賽程 (格式：時間 | 組別 | 選手)",
+        "第二天賽程 (格式：時間 ｜ 組別 ｜ 選手)",
         value=st.session_state["day2_text"],
         height=300,
         placeholder="若無第二天請保持空白..."
@@ -290,15 +292,15 @@ with col_b:
 with st.expander("➕ 點此新增更多天數賽程 (若賽程超過兩天)"):
     extra_date_title = st.text_input("額外天數日期說明", value="")
     extra_data_text = st.text_area(
-        "額外天數賽程 (格式：時間 | 組別 | 選手)",
+        "額外天數賽程 (格式：時間 ｜ 組別 ｜ 選手)",
         value="",
         height=150,
-        placeholder="10:00 | 決賽 | ..."
+        placeholder="10:00 ｜ 決賽 ｜ ..."
     )
 
 st.markdown("---")
 
-# 4. 即時預覽與圖片下載 (採用標準無干擾的 html 元件呈現，支援滾動捲動)
+# 4. 即時預覽與圖片下載
 st.header("🖼️ 4. 即時預覽與圖片下載")
 
 combined_day2_text = data2_text
@@ -319,8 +321,7 @@ poster_html, dynamic_height = generate_poster_html(
     title_font_size=title_font_size
 )
 
-st.subheader("🌐 網頁即時渲染預覽 (完整呈現)")
-# 設定 scrolling=True，讓您可以在預覽框內上下左右滑動看清整張 1580px 寬版海報
+st.subheader("🌐 網頁即時渲染預覽")
 st.components.v1.html(poster_html, height=800, scrolling=True)
 
 st.subheader("📥 匯出為高解析 PNG 圖片")
@@ -329,7 +330,6 @@ if st.button("🚀 產出 PNG 圖片檔案", type="primary"):
         try:
             output_img_path = "generated_schedule.png"
             hti = Html2Image(output_path='.')
-            # 下載的 PNG 保持 1580px 寬與完整動態高度，畫質完美清晰
             hti.screenshot(html_str=poster_html, save_as=output_img_path, size=(1580, dynamic_height))
             
             if os.path.exists(output_img_path):
