@@ -33,7 +33,7 @@ if "day2_text" not in st.session_state:
     st.session_state["day2_text"] = ""
 
 # -----------------------------------------------------------------------------
-# 解析與生成繪圖 HTML 的函式
+# 解析與生成繪圖 HTML 的函式 (寬度改為 1580px)
 # -----------------------------------------------------------------------------
 def parse_text_to_cards(text):
     cards_html = ""
@@ -62,13 +62,13 @@ def parse_text_to_cards(text):
             """
     return cards_html, len(lines)
 
-def generate_poster_html(sub_title, main_title, tag_left, tag_right, date1_title, data1_text, date2_title, data2_text, item_font_size=16, bg_color="#0d1b2a", title_font_size=40):
+def generate_poster_html(sub_title, main_title, tag_left, tag_right, date1_title, data1_text, date2_title, data2_text, item_font_size=16, bg_color="#0d1b2a", title_font_size=46):
     c19, count1 = parse_text_to_cards(data1_text)
     c20, count2 = parse_text_to_cards(data2_text)
 
-    # 動態計算高度，並給予更寬裕的底部留白空間，確保絕不被裁切
+    # 動態計算高度，寬度固定為 1580px
     total_cards = max(count1, count2) if date2_title.strip() and data2_text.strip() else count1
-    dynamic_height = max(1500, 400 + (total_cards * 105))
+    dynamic_height = max(1500, 450 + (total_cards * 105))
 
     html_content = f"""<!DOCTYPE html>
 <html>
@@ -84,8 +84,8 @@ def generate_poster_html(sub_title, main_title, tag_left, tag_right, date1_title
     font-family: 'Noto Sans TC', sans-serif;
     color: #ffffff;
     margin: 0;
-    padding: 40px 35px 80px 35px; /* 底部增加留白 */
-    width: 1050px;
+    padding: 50px 50px 90px 50px;
+    width: 1580px;
     box-sizing: border-box;
     display: flex;
     flex-direction: column;
@@ -93,89 +93,89 @@ def generate_poster_html(sub_title, main_title, tag_left, tag_right, date1_title
   }}
   .header {{
     text-align: center;
-    margin-bottom: 30px;
+    margin-bottom: 35px;
     width: 100%;
   }}
   .badge-icon {{
-    font-size: 40px;
-    margin-bottom: 8px;
+    font-size: 46px;
+    margin-bottom: 10px;
   }}
   .sub-title {{
     color: #cbd5e1;
-    font-size: 21px;
+    font-size: 24px;
     font-weight: 600;
   }}
   .main-title {{
     font-size: {title_font_size}px;
     font-weight: 800;
-    margin: 10px 0 16px 0;
+    margin: 12px 0 18px 0;
     color: #ffffff;
-    letter-spacing: 1px;
+    letter-spacing: 1.5px;
   }}
   .tags {{
     display: flex;
     justify-content: center;
-    gap: 16px;
+    gap: 18px;
   }}
   .tag-yellow {{
     background-color: #f59e0b;
     color: #000;
     font-weight: bold;
-    padding: 7px 20px;
-    border-radius: 20px;
-    font-size: 16px;
+    padding: 8px 24px;
+    border-radius: 22px;
+    font-size: 18px;
   }}
   .tag-white {{
     background-color: #ffffff;
     color: #000;
     font-weight: bold;
-    padding: 7px 20px;
-    border-radius: 20px;
-    font-size: 16px;
+    padding: 8px 24px;
+    border-radius: 22px;
+    font-size: 18px;
   }}
   .section-container {{
     width: 100%;
-    max-width: 980px;
+    max-width: 1460px;
   }}
   .section-title {{
     background-color: #1e3a8a;
     color: #ffffff;
     text-align: center;
-    font-size: 21px;
+    font-size: 24px;
     font-weight: bold;
-    padding: 13px;
-    border-radius: 8px;
-    margin: 25px 0 15px 0;
+    padding: 15px;
+    border-radius: 10px;
+    margin: 30px 0 18px 0;
     border: 2px solid #3b82f6;
   }}
   .grid {{
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 16px;
-    margin-bottom: 12px;
+    gap: 20px;
+    margin-bottom: 15px;
   }}
   .card {{
     background-color: #1e3a8a;
-    border-radius: 10px;
+    border-radius: 12px;
     overflow: hidden;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+    box-shadow: 0 6px 16px rgba(0,0,0,0.4);
   }}
   .time-header {{
     background-color: #1e40af;
     text-align: center;
-    padding: 9px 0;
-    font-size: 19px;
+    padding: 11px 0;
+    font-size: 21px;
     font-weight: bold;
     color: #ffffff;
     border-bottom: 1px solid #2563eb;
   }}
   .content {{
     background-color: #ffffff;
-    padding: 14px 18px;
+    padding: 16px 22px;
     display: flex;
     flex-direction: column;
     justify-content: center;
-    gap: 6px;
+    gap: 8px;
   }}
   .item {{
     font-size: {item_font_size}px;
@@ -216,7 +216,7 @@ def generate_poster_html(sub_title, main_title, tag_left, tag_right, date1_title
 # Streamlit 主畫面佈局
 # -----------------------------------------------------------------------------
 st.title("🏸 羽球隊賽程圖片產生器")
-st.write("請依照下方步驟，將賽程圖片轉為文字後貼入編輯區，即可即時產出完整無裁切的海報。")
+st.write("請依照下方步驟，將賽程圖片轉為文字後貼入編輯區，即可即時產出 1580px 寬版完整海報。")
 
 # 1. 標題、版型與樣式設定
 st.header("⚙️ 1. 標題、版型與樣式設定")
@@ -243,10 +243,10 @@ with col_c1:
     selected_bg = bg_color_map[bg_color_option]
 
 with col_c2:
-    item_font_size = st.slider("選手名字字體大小 (px)", min_value=12, max_value=24, value=16)
+    item_font_size = st.slider("選手名字字體大小 (px)", min_value=12, max_value=28, value=18)
 
 with col_c3:
-    title_font_size = st.slider("主標題字體大小 (px)", min_value=28, max_value=48, value=40)
+    title_font_size = st.slider("主標題字體大小 (px)", min_value=32, max_value=60, value=46)
 
 st.markdown("---")
 
@@ -298,7 +298,7 @@ with st.expander("➕ 點此新增更多天數賽程 (若賽程超過兩天)"):
 
 st.markdown("---")
 
-# 4. 即時預覽與圖片下載 (大幅提高預覽元件高度，保證完整呈現)
+# 4. 即時預覽與圖片下載 (寬度 1580px、動態完整高度、防亂碼)
 st.header("🖼️ 4. 即時預覽與圖片下載")
 
 combined_day2_text = data2_text
@@ -319,21 +319,20 @@ poster_html, dynamic_height = generate_poster_html(
     title_font_size=title_font_size
 )
 
-st.subheader("🌐 網頁即時渲染預覽 (完整呈現・防亂碼)")
-# 將預覽高度設為 dynamic_height + 200，確保元件絕對足夠高，不被任何框架裁切
+st.subheader("🌐 網頁即時渲染預覽 (1580px 寬版・完整呈現)")
 st.components.v1.html(poster_html, height=dynamic_height + 200, scrolling=False)
 
 st.subheader("📥 匯出為高解析 PNG 圖片")
 if st.button("🚀 產出 PNG 圖片檔案", type="primary"):
-    with st.spinner("正在轉換為高解析圖片..."):
+    with st.spinner("正在轉換為 1580px 高解析圖片..."):
         try:
             output_img_path = "generated_schedule.png"
             hti = Html2Image(output_path='.')
-            # 下載的 PNG 尺寸高度也同步採用動態計算值 + 100 留白
-            hti.screenshot(html_str=poster_html, save_as=output_img_path, size=(1050, dynamic_height + 100))
+            # 截圖大小改為寬 1580px，高度動態對應
+            hti.screenshot(html_str=poster_html, save_as=output_img_path, size=(1580, dynamic_height + 100))
             
             if os.path.exists(output_img_path):
-                st.image(output_img_path, caption="已產出圖檔預覽", use_container_width=True)
+                st.image(output_img_path, caption="已產出圖檔預覽 (1580px 寬)", use_container_width=True)
                 with open(output_img_path, "rb") as file:
                     st.download_button(
                         label="⬇️ 點此下載圖檔 (PNG)",
