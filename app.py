@@ -86,7 +86,6 @@ def generate_poster_html(sub_title, main_title, tag_left, tag_right, date1_title
     margin: 0;
     padding: 50px 50px 100px 50px;
     width: 1580px;
-    height: {dynamic_height}px;
     box-sizing: border-box;
     display: flex;
     flex-direction: column;
@@ -299,7 +298,7 @@ with st.expander("➕ 點此新增更多天數賽程 (若賽程超過兩天)"):
 
 st.markdown("---")
 
-# 4. 即時預覽與圖片下載 (精準計算縮放比例，確保 1580px 全貌完整呈現於畫面中)
+# 4. 即時預覽與圖片下載 (採用標準無干擾的 html 元件呈現，支援滾動捲動)
 st.header("🖼️ 4. 即時預覽與圖片下載")
 
 combined_day2_text = data2_text
@@ -320,20 +319,9 @@ poster_html, dynamic_height = generate_poster_html(
     title_font_size=title_font_size
 )
 
-st.subheader("🌐 網頁即時渲染預覽 (完整呈現全貌)")
-
-# 使用精確計算的縮放比例 (scale = 0.4)，將寬版海報完整呈現
-scale_factor = 0.4
-preview_display_height = int(dynamic_height * scale_factor)
-
-scaled_preview_html = f"""
-<div style="width: 100%; overflow: hidden; background: #000; border-radius: 12px; padding: 15px; display: flex; justify-content: center;">
-  <div style="transform: scale({scale_factor}); transform-origin: top center; width: 1580px; height: {dynamic_height}px; margin-bottom: -{int(dynamic_height * (1 - scale_factor))}px;">
-    {poster_html}
-  </div>
-</div>
-"""
-st.components.v1.html(scaled_preview_html, height=preview_display_height + 40, scrolling=False)
+st.subheader("🌐 網頁即時渲染預覽 (完整呈現)")
+# 設定 scrolling=True，讓您可以在預覽框內上下左右滑動看清整張 1580px 寬版海報
+st.components.v1.html(poster_html, height=800, scrolling=True)
 
 st.subheader("📥 匯出為高解析 PNG 圖片")
 if st.button("🚀 產出 PNG 圖片檔案", type="primary"):
@@ -341,7 +329,7 @@ if st.button("🚀 產出 PNG 圖片檔案", type="primary"):
         try:
             output_img_path = "generated_schedule.png"
             hti = Html2Image(output_path='.')
-            # 下載的 PNG 保持 1580px 寬與完整動態高度，不縮放、極高畫質
+            # 下載的 PNG 保持 1580px 寬與完整動態高度，畫質完美清晰
             hti.screenshot(html_str=poster_html, save_as=output_img_path, size=(1580, dynamic_height))
             
             if os.path.exists(output_img_path):
