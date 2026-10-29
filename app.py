@@ -14,8 +14,21 @@ st.set_page_config(
     layout="centered"
 )
 
-POSTER_WIDTH = 1580      # 海報固定寬度 (px)
-BOTTOM_PAD = 60          # 海報底部留白 (px)，預覽與 PNG 共用
+POSTER_WIDTH = 1080      # 海報固定寬度 (px)
+BOTTOM_PAD = 120         # 海報底部留白 (px)，預覽與 PNG 共用
+FEMALE_COLOR = "#be1e4a" # 女子組別文字色 (固定，不隨色系變動)
+ACCENT_YELLOW = "#f0c030"  # 黃色標籤與圖示 (固定)
+
+# 色系：只改原本「藍色」的部分 (背景、時間列、男子組別文字、副標題)
+# 白色卡片內容區、黃色標籤、白色標籤、女子紅字都不變
+THEMES = {
+    "藍色體系": dict(bg="#13214b", header="#23407c", male="#1d4f9f", sub="#c3cdf2"),
+    "綠色體系": dict(bg="#0b3d2e", header="#1f6f50", male="#1b7a4f", sub="#b7e4cf"),
+    "灰色體系": dict(bg="#1f2937", header="#4b5563", male="#374151", sub="#d1d5db"),
+    "墨黑體系": dict(bg="#111111", header="#3a3a3a", male="#3f3f46", sub="#d4d4d8"),
+    "紫色體系": dict(bg="#2a1a5e", header="#5b3fa5", male="#5b3fa5", sub="#d8ccf5"),
+    "青藍綠體系": dict(bg="#0c3b45", header="#1f6f7d", male="#1a6b7a", sub="#bde3ea"),
+}
 
 # -----------------------------------------------------------------------------
 # 中文字型 (PNG 用：轉成 base64 內嵌，避免 file:// 讀不到而變成方塊字)
@@ -45,68 +58,81 @@ if "day2_text" not in st.session_state:
 
 # -----------------------------------------------------------------------------
 # 解析文字 → 卡片 HTML
+# 同一個時間的多筆資料會合併在同一張卡片 (多行)
+# 組別含「女」→ 紅色；其餘 (男) → 色系顏色
 # -----------------------------------------------------------------------------
 def parse_text_to_cards(text):
-    cards_html = ""
+    groups = {}   # time -> list of (cate, players)
+    order = []
     lines = [l.strip() for l in text.strip().split("\n") if l.strip()]
-    count = 0
     for line in lines:
         normalized_line = line.replace("｜", "|")
-        parts = [html_lib.escape(p.strip()) for p in normalized_line.split("|")]
-
+        parts = [p.strip() for p in normalized_line.split("|")]
         if len(parts) >= 3:
             time_str, cate, players = parts[0], parts[1], parts[2]
-            body = f'<span class="cate">【{cate}】</span>{players}'
         elif len(parts) == 2:
-            time_str, players = parts[0], parts[1]
-            body = players
+            time_str, cate, players = parts[0], "", parts[1]
         else:
             continue
-        count += 1
+        if time_str not in groups:
+            groups[time_str] = []
+            order.append(time_str)
+        groups[time_str].append((cate, players))
+
+    cards_html = ""
+    for time_str in order:
+        items_html = ""
+        for cate, players in groups[time_str]:
+            players_e = html_lib.escape(players)
+            if cate:
+                cls = "cate-f" if "女" in cate else "cate-m"
+                items_html += f'<div class="item"><span class="{cls}">【{html_lib.escape(cate)}】</span>{players_e}</div>'
+            else:
+                items_html += f'<div class="item">{players_e}</div>'
         cards_html += f"""
         <div class="card">
-          <div class="time-header">{time_str}</div>
-          <div class="content"><div class="item">{body}</div></div>
+          <div class="time-header">{html_lib.escape(time_str)}</div>
+          <div class="content">{items_html}</div>
         </div>"""
-    return cards_html, count
+    return cards_html, len(order)
+
+# -----------------------------------------------------------------------------
+# 羽球圖示 (黃色)
+# -----------------------------------------------------------------------------
+def badge_svg(bg):
+    return f"""<svg width="46" height="76" viewBox="0 0 48 80" xmlns="http://www.w3.org/2000/svg">
+  <path d="M9 4 H39 L31 58 H17 Z" fill="{ACCENT_YELLOW}"/>
+  <path d="M10 18 H38 M12.5 32 H35.5 M14.5 46 H33.5 M17.5 4 L20.5 58 M24 4 V58 M30.5 4 L27.5 58"
+        stroke="{bg}" stroke-width="2.6" fill="none"/>
+  <circle cx="24" cy="68" r="7" fill="none" stroke="{ACCENT_YELLOW}" stroke-width="4"/>
+</svg>"""
 
 # -----------------------------------------------------------------------------
 # 產生海報 HTML
 # preview=True  → 加上縮放腳本，讓海報剛好塞進預覽區 (無 scroll bar)
-# preview=False → 原尺寸 1580px，用於輸出 PNG
+# preview=False → 原尺寸，用於輸出 PNG
 # 兩者使用「同一份」版面 CSS，所以預覽與下載圖片一致
 # -----------------------------------------------------------------------------
-BADGE_SVG = """<svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
-  <circle cx="32" cy="50" r="10" fill="#f8fafc"/>
-  <path d="M24 44 L10 8 L22 12 L32 4 L42 12 L54 8 L40 44 Z" fill="#e2e8f0" stroke="#94a3b8" stroke-width="2"/>
-  <path d="M32 6 L32 44 M21 10 L27 44 M43 10 L37 44" stroke="#94a3b8" stroke-width="1.5" fill="none"/>
-</svg>"""
-
-THEMES = {
-    "藍色體系": dict(bg="#0d1b2a", primary="#1e3a8a", header="#1e40af", line="#3b82f6", cate="#dc2626", accent="#f59e0b"),
-    "綠色體系": dict(bg="#064e3b", primary="#047857", header="#065f46", line="#34d399", cate="#b91c1c", accent="#fbbf24"),
-    "灰色體系": dict(bg="#1e293b", primary="#475569", header="#334155", line="#94a3b8", cate="#dc2626", accent="#f59e0b"),
-    "墨黑體系": dict(bg="#111111", primary="#2d2d2d", header="#404040", line="#a3a3a3", cate="#dc2626", accent="#f59e0b"),
-    "紅色體系": dict(bg="#450a0a", primary="#991b1b", header="#7f1d1d", line="#f87171", cate="#b91c1c", accent="#fbbf24"),
-    "紫色體系": dict(bg="#2e1065", primary="#5b21b6", header="#4c1d95", line="#a78bfa", cate="#dc2626", accent="#f59e0b"),
-}
-
 def generate_poster_html(sub_title, main_title, tag_left, tag_right,
                          date1_title, data1_text, date2_title, data2_text,
-                         body_font_size=20, theme_name="藍色體系", title_font_size=46,
+                         body_font_size=28, theme_name="藍色體系", title_font_size=100,
                          preview=True):
     theme = THEMES[theme_name]
     bg_color = theme["bg"]
+
     c1, count1 = parse_text_to_cards(data1_text)
-    show_day2 = bool(date2_title.strip() and data2_text.strip())
+    show_day2 = bool(data2_text.strip())
     c2, count2 = parse_text_to_cards(data2_text) if show_day2 else ("", 0)
 
     sub_title = html_lib.escape(sub_title)
     main_title = html_lib.escape(main_title)
     tag_left = html_lib.escape(tag_left)
     tag_right = html_lib.escape(tag_right)
-    date1_title_e = html_lib.escape(date1_title)
-    date2_title_e = html_lib.escape(date2_title)
+
+    title1_html = (f'<div class="section-title">{html_lib.escape(date1_title)}</div>'
+                   if date1_title.strip() else "")
+    title2_html = (f'<div class="section-title">{html_lib.escape(date2_title)}</div>'
+                   if date2_title.strip() else "")
 
     # 字型：預覽用 Google Fonts，PNG 用內嵌 base64
     if preview:
@@ -124,10 +150,7 @@ def generate_poster_html(sub_title, main_title, tag_left, tag_right,
 }}
 </style>"""
 
-    day2_html = (
-        f'<div class="section-title">{date2_title_e}</div><div class="grid">{c2}</div>'
-        if show_day2 else ""
-    )
+    day2_html = (f'{title2_html}<div class="grid">{c2}</div>' if show_day2 else "")
 
     preview_script = ""
     if preview:
@@ -175,61 +198,61 @@ def generate_poster_html(sub_title, main_title, tag_left, tag_right,
     font-family: 'Noto Sans TC', 'Microsoft JhengHei', 'PingFang TC', sans-serif;
     color: #ffffff;
     width: {POSTER_WIDTH}px;
-    padding: 50px 50px {BOTTOM_PAD}px 50px;
+    padding: 60px 54px {BOTTOM_PAD}px 54px;
     box-sizing: border-box;
     display: flex;
     flex-direction: column;
     align-items: center;
     transform-origin: top left;
   }}
-  .header {{ text-align: center; margin-bottom: 35px; width: 100%; }}
-  .badge-icon {{ height: 64px; margin-bottom: 10px; }}
-  .sub-title {{ color: #cbd5e1; font-size: 24px; font-weight: 700; }}
+  .header {{ text-align: center; margin-bottom: 46px; width: 100%; }}
+  .badge-icon {{ height: 76px; margin-bottom: 14px; line-height: 0; }}
+  .sub-title {{ color: {theme['sub']}; font-size: 40px; font-weight: 800; line-height: 1.3; }}
   .main-title {{
-    font-size: {title_font_size}px; font-weight: 800;
-    margin: 12px 0 18px 0; color: #ffffff; letter-spacing: 1.5px;
+    font-size: {title_font_size}px; font-weight: 800; line-height: 1.2;
+    margin: 4px 0 20px 0; color: #ffffff; letter-spacing: 1px;
   }}
-  .tags {{ display: flex; justify-content: center; gap: 18px; }}
+  .tags {{ display: flex; justify-content: center; gap: 20px; }}
   .tag-yellow {{
-    background-color: {theme['accent']}; color: #000; font-weight: bold;
-    padding: 8px 24px; border-radius: 22px; font-size: 18px;
+    background-color: {ACCENT_YELLOW}; color: #1f1a05; font-weight: 700;
+    padding: 12px 38px; border-radius: 40px; font-size: 28px; line-height: 1.4;
   }}
   .tag-white {{
-    background-color: #ffffff; color: #000; font-weight: bold;
-    padding: 8px 24px; border-radius: 22px; font-size: 18px;
+    background-color: #ffffff; color: #1f2937; font-weight: 700;
+    padding: 12px 38px; border-radius: 40px; font-size: 28px; line-height: 1.4;
   }}
-  .section-container {{ width: 100%; max-width: 1460px; }}
+  .section-container {{ width: 100%; }}
   .section-title {{
-    background-color: {theme['primary']}; color: #ffffff; text-align: center;
-    font-size: {body_font_size}px; font-weight: bold; padding: 15px;
-    border-radius: 10px; margin: 30px 0 18px 0; border: 2px solid {theme['line']};
+    background-color: {theme['header']}; color: #ffffff; text-align: center;
+    font-size: {body_font_size}px; font-weight: 700; padding: 14px;
+    border-radius: 12px; margin: 26px 0 20px 0;
   }}
   .grid {{
     display: grid; grid-template-columns: 1fr 1fr;
-    gap: 20px; margin-bottom: 15px;
+    gap: 22px 20px; margin-bottom: 22px;
   }}
   .card {{
-    background-color: {theme['primary']}; border-radius: 12px; overflow: hidden;
-    box-shadow: 0 6px 16px rgba(0,0,0,0.4);
+    background-color: #ffffff; border-radius: 14px; overflow: hidden;
+    display: flex; flex-direction: column;
   }}
   .time-header {{
-    background-color: {theme['header']}; text-align: center; padding: 11px 0;
-    font-size: {body_font_size}px; font-weight: bold; color: #ffffff;
-    border-bottom: 1px solid {theme['line']};
+    background-color: {theme['header']}; text-align: center; padding: 16px 0;
+    font-size: {body_font_size}px; font-weight: 700; color: #ffffff; line-height: 1.4;
   }}
   .content {{
-    background-color: #ffffff; padding: 16px 22px;
-    display: flex; flex-direction: column; justify-content: center; gap: 8px;
+    flex: 1; background-color: #ffffff; padding: 16px 28px;
+    display: flex; flex-direction: column; justify-content: center; gap: 6px;
   }}
   .item {{ font-size: {body_font_size}px; color: #1e293b; font-weight: 700; line-height: 1.4; }}
-  .cate {{ color: {theme['cate']}; font-weight: bold; }}
+  .cate-m {{ color: {theme['male']}; font-weight: 800; }}
+  .cate-f {{ color: {FEMALE_COLOR}; font-weight: 800; }}
 </style>
 </head>
 <body>
 {wrap_open}
 <div id="poster">
   <div class="header">
-    <div class="badge-icon">{BADGE_SVG}</div>
+    <div class="badge-icon">{badge_svg(bg_color)}</div>
     <div class="sub-title">{sub_title}</div>
     <div class="main-title">{main_title}</div>
     <div class="tags">
@@ -239,7 +262,7 @@ def generate_poster_html(sub_title, main_title, tag_left, tag_right,
   </div>
 
   <div class="section-container">
-    <div class="section-title">{date1_title_e}</div>
+    {title1_html}
     <div class="grid">{c1}</div>
     {day2_html}
   </div>
@@ -256,7 +279,7 @@ def generate_poster_html(sub_title, main_title, tag_left, tag_right,
 # -----------------------------------------------------------------------------
 def render_png(html_str, count1, count2, out_path="generated_schedule.png"):
     rows = math.ceil(count1 / 2) + math.ceil(count2 / 2)
-    tall_height = 900 + rows * 320      # 保守高估，之後會裁切
+    tall_height = 1000 + rows * 380      # 保守高估，之後會裁切
 
     if os.path.exists(out_path):
         os.remove(out_path)
@@ -286,7 +309,7 @@ def render_png(html_str, count1, count2, out_path="generated_schedule.png"):
 # 主畫面
 # -----------------------------------------------------------------------------
 st.title("🏸 羽球隊賽程圖片產生器")
-st.write("請依照下方步驟，將賽程圖片轉為文字後貼入編輯區，即可即時產出 1580px 寬版完整海報。")
+st.write(f"請依照下方步驟，將賽程圖片轉為文字後貼入編輯區，即可即時產出 {POSTER_WIDTH}px 寬的完整海報。")
 
 st.header("⚙️ 1. 標題、版型與樣式設定")
 col_s1, col_s2 = st.columns(2)
@@ -294,16 +317,16 @@ with col_s1:
     main_title = st.text_input("主標題", value="MAUC 秋季賽")
     tag_left = st.text_input("左側標籤", value="整體流程表")
 with col_s2:
-    sub_title = st.text_input("副標題 / 隊伍名稱", value="2026年會稽國小羽球隊賽程表")
-    tag_right = st.text_input("右側標籤 (日期)", value="日期：2026/09/28 (一)")
+    sub_title = st.text_input("副標題 / 隊伍名稱", value="2026年牧羽盃全國四季聯賽")
+    tag_right = st.text_input("右側標籤 (日期)", value="日期：2026/09/28（一）")
 
 col_c1, col_c2, col_c3 = st.columns(3)
 with col_c1:
     theme_name = st.selectbox("整體色系", list(THEMES.keys()))
 with col_c2:
-    body_font_size = st.slider("內文字體大小 (px)（日期／時間／選手同大小）", min_value=14, max_value=32, value=20)
+    body_font_size = st.slider("內文字體大小 (px)（日期／時間／選手同大小）", min_value=18, max_value=40, value=28)
 with col_c3:
-    title_font_size = st.slider("主標題字體大小 (px)", min_value=32, max_value=60, value=46)
+    title_font_size = st.slider("主標題字體大小 (px)", min_value=48, max_value=130, value=100)
 
 st.markdown("---")
 
@@ -320,16 +343,16 @@ with st.expander("📋 點此查看/複製 AI 轉換指令"):
 st.markdown("---")
 
 st.header("📝 3. 賽程資料編輯區")
-st.info("💡 請將 AI 整理好的賽程文字分別貼入下方對應的日期欄位中（格式：時間 ｜ 組別 ｜ 選手，全半形皆可）。")
+st.info("💡 格式：時間 ｜ 組別 ｜ 選手（全半形皆可）。同一個時間的多筆資料會自動合併在同一張卡片；組別含「女」會顯示紅色。日期說明若留空，海報上就不會顯示日期標題列。")
 
 col_a, col_b = st.columns(2)
 with col_a:
-    date1_title = st.text_input("第一天日期說明", value="9月28日 (星期一)")
+    date1_title = st.text_input("第一天日期說明 (不需要可留空)", value="")
     data1_text = st.text_area(
         "第一天賽程 (格式：時間 ｜ 組別 ｜ 選手)",
         value=st.session_state["day1_text"],
         height=300,
-        placeholder="例如：\n09:00 ｜ 國小一 ｜ 王大明"
+        placeholder="例如：\n09:00 ｜ 低男單 ｜ 童羿勛、謝皓喆"
     )
 with col_b:
     date2_title = st.text_input("第二天日期說明 (若無可留空)", value="")
@@ -354,7 +377,7 @@ st.markdown("---")
 st.header("🖼️ 4. 即時預覽與圖片下載")
 
 combined_day2_text = data2_text
-if extra_date_title and extra_data_text.strip():
+if extra_data_text.strip():
     combined_day2_text += f"\n{extra_data_text}"
 
 poster_kwargs = dict(
@@ -378,15 +401,15 @@ st.subheader("🌐 網頁即時預覽 (自動縮放符合畫面・無捲動軸)"
 st.components.v1.html(preview_html, height=900, scrolling=False)
 
 st.subheader("📥 匯出為高解析 PNG 圖片")
-st.caption("下載的圖片與上方預覽使用同一份版面，完整 1580px 寬、高度依內容自動裁切。")
+st.caption(f"下載的圖片與上方預覽使用同一份版面，完整 {POSTER_WIDTH}px 寬、高度依內容自動裁切。")
 
 if st.button("🚀 產出 PNG 圖片檔案", type="primary"):
-    with st.spinner("正在轉換為 1580px 高解析圖片..."):
+    with st.spinner(f"正在轉換為 {POSTER_WIDTH}px 高解析圖片..."):
         try:
             png_html, n1, n2 = generate_poster_html(preview=False, **poster_kwargs)
             out_path = render_png(png_html, n1, n2)
             if os.path.exists(out_path):
-                st.image(out_path, caption="已產出圖檔預覽 (1580px 寬高畫質)", use_container_width=True)
+                st.image(out_path, caption=f"已產出圖檔預覽 ({POSTER_WIDTH}px 寬)", use_container_width=True)
                 with open(out_path, "rb") as file:
                     st.download_button(
                         label="⬇️ 點此下載圖檔 (PNG)",
