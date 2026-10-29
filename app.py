@@ -33,7 +33,7 @@ if "day2_text" not in st.session_state:
     st.session_state["day2_text"] = ""
 
 # -----------------------------------------------------------------------------
-# 解析與生成繪圖 HTML 的函式 (寬度改為 1580px)
+# 解析與生成繪圖 HTML 的函式
 # -----------------------------------------------------------------------------
 def parse_text_to_cards(text):
     cards_html = ""
@@ -66,9 +66,8 @@ def generate_poster_html(sub_title, main_title, tag_left, tag_right, date1_title
     c19, count1 = parse_text_to_cards(data1_text)
     c20, count2 = parse_text_to_cards(data2_text)
 
-    # 動態計算高度，寬度固定為 1580px
     total_cards = max(count1, count2) if date2_title.strip() and data2_text.strip() else count1
-    dynamic_height = max(1500, 450 + (total_cards * 105))
+    dynamic_height = max(1600, 500 + (total_cards * 110))
 
     html_content = f"""<!DOCTYPE html>
 <html>
@@ -84,8 +83,9 @@ def generate_poster_html(sub_title, main_title, tag_left, tag_right, date1_title
     font-family: 'Noto Sans TC', sans-serif;
     color: #ffffff;
     margin: 0;
-    padding: 50px 50px 90px 50px;
+    padding: 50px 50px 100px 50px;
     width: 1580px;
+    height: {dynamic_height}px;
     box-sizing: border-box;
     display: flex;
     flex-direction: column;
@@ -298,7 +298,7 @@ with st.expander("➕ 點此新增更多天數賽程 (若賽程超過兩天)"):
 
 st.markdown("---")
 
-# 4. 即時預覽與圖片下載 (寬度 1580px、動態完整高度、防亂碼)
+# 4. 即時預覽與圖片下載 (加入自動縮放，確保 1580px 寬版在畫面中完整顯示不被切掉)
 st.header("🖼️ 4. 即時預覽與圖片下載")
 
 combined_day2_text = data2_text
@@ -319,8 +319,17 @@ poster_html, dynamic_height = generate_poster_html(
     title_font_size=title_font_size
 )
 
-st.subheader("🌐 網頁即時渲染預覽 (1580px 寬版・完整呈現)")
-st.components.v1.html(poster_html, height=dynamic_height + 200, scrolling=False)
+st.subheader("🌐 網頁即時渲染預覽 (自動縮放・完整呈現)")
+
+# 透過 CSS wrapper 將 1580px 寬的預覽自動等比例縮放進頁面容器中，完美呈現全貌
+scaled_preview_html = f"""
+<div style="width: 100%; overflow: hidden; background: #000; border-radius: 10px; padding: 10px; display: flex; justify-content: center;">
+  <div style="transform: scale(0.45); transform-origin: top center; width: 1580px; height: {dynamic_height}px; margin-bottom: -{int(dynamic_height * 0.55)}px;">
+    {poster_html}
+  </div>
+</div>
+"""
+st.components.v1.html(scaled_preview_html, height=int(dynamic_height * 0.45) + 50, scrolling=False)
 
 st.subheader("📥 匯出為高解析 PNG 圖片")
 if st.button("🚀 產出 PNG 圖片檔案", type="primary"):
@@ -328,8 +337,8 @@ if st.button("🚀 產出 PNG 圖片檔案", type="primary"):
         try:
             output_img_path = "generated_schedule.png"
             hti = Html2Image(output_path='.')
-            # 截圖大小改為寬 1580px，高度動態對應
-            hti.screenshot(html_str=poster_html, save_as=output_img_path, size=(1580, dynamic_height + 100))
+            # 下載的 PNG 依然保持完整 1580px 高畫質無縮放
+            hti.screenshot(html_str=poster_html, save_as=output_img_path, size=(1580, dynamic_height))
             
             if os.path.exists(output_img_path):
                 st.image(output_img_path, caption="已產出圖檔預覽 (1580px 寬)", use_container_width=True)
