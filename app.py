@@ -65,6 +65,9 @@ if "personal_text" not in st.session_state:
 # -----------------------------------------------------------------------------
 # 解析整體流程表文字 → 卡片 HTML
 # -----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
+# 解析整體流程表文字 → 卡片 HTML (同時間且同組別以「、」自動合併選手)
+# -----------------------------------------------------------------------------
 def parse_text_to_cards(text):
     groups = {}   
     order = []
@@ -96,7 +99,8 @@ def parse_text_to_cards(text):
     for time_str in order:
         items_html = ""
         for cate, player_list in groups[time_str]:
-            players_str = " ".join(player_list)
+            # 將多組選手以「、」完美串接，確保中間不會漏掉頓號
+            players_str = "、".join(player_list)
             players_e = html_lib.escape(players_str)
             if cate:
                 # 嚴格判斷是否包含女且不含男
