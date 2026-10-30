@@ -48,10 +48,10 @@ def get_font_base64():
         return ""
 
 # -----------------------------------------------------------------------------
-# Session State 初始化
+# Session State 初始化 (不寫死預設內容)
 # -----------------------------------------------------------------------------
 if "g_date1" not in st.session_state:
-    st.session_state["g_date1"] = "9月28日 (星期一)"
+    st.session_state["g_date1"] = ""
 if "g_text1" not in st.session_state:
     st.session_state["g_text1"] = ""
 if "g_date2" not in st.session_state:
@@ -125,7 +125,6 @@ def parse_personal_integrated_text(text):
         raw_l = line.strip()
         if not raw_l:
             continue
-        # 判斷是否為日期標題列 (包含 【】 或 包含日期字眼且無冒號與分隔線)
         if ("【" in raw_l and "】" in raw_l) or ("月" in raw_l and ":" not in raw_l and "｜" not in raw_l and "|" not in raw_l and "男" not in raw_l and "女" not in raw_l):
             if current_lines or current_date_title:
                 blocks.append((current_date_title, current_lines))
@@ -149,12 +148,10 @@ def parse_personal_integrated_text(text):
         current_sec = "選手個人賽程"
         
         for line in block_lines:
-            # 支援「時間 | 組別 | 選手」或是「男 姓名 (組別) : 時間」格式
             if "｜" in line or "|" in line:
                 parts = [p.strip() for p in line.replace("｜", "|").split("|")]
                 if len(parts) >= 3:
                     time_p, cate_p, player_p = parts[0], parts[1], parts[2]
-                    # 轉換為標準格式加入處理
                     gender_str = "女" if ("女" in cate_p and "男" not in cate_p) else "男"
                     line = f"{gender_str}  {player_p} ({cate_p}) : {time_p}"
 
@@ -182,7 +179,6 @@ def parse_personal_integrated_text(text):
                 left_part = parts[0].strip()
                 time_part = parts[1].strip() if len(parts) > 1 else ""
                 
-                # 嚴格判斷性別：檢查開頭或字串內是否有明確的「女」且無「男」
                 if left_part.startswith("女") or ("女" in left_part and "男" not in left_part):
                     gender = "女"
                     name_cate = left_part[1:].strip() if left_part.startswith("女") else left_part
@@ -260,7 +256,6 @@ def generate_poster_html(sub_title, main_title, tag_left, tag_right,
   </div>"""
         total_metric = count1 + count2 + count_x
     else:
-        # 個人賽程：直接解析完整大文字框
         body_content_html, total_metric = parse_personal_integrated_text(data1_text)
         body_content = f"""
   <div class="section-container">
@@ -512,7 +507,7 @@ col_input1, col_input2 = st.columns(2)
 
 with col_input1:
     st.header("📝 2. 賽程資料編輯區 (整體流程表)")
-    st.info("💡請先將賽程截圖並用AI處理文字，給AI："請將這張圖改成可直接複製到網頁的格式(包含斷行)，選手僅帶出XX國小的即可。 格式：時間 ｜ 組別 ｜ 選手 (如： 08:00 | 國小五年級男單 | 王大明)")
+    st.info("💡 請先將賽程截圖並用 AI 處理文字。給 AI 提示詞範例：'請將這張圖改成可直接複製到網頁的格式(包含斷行)，選手僅帶出XX國小的即可。格式：時間 ｜ 組別 ｜ 選手 (如：08:00 | 國小五年級男單 | 王大明)'")
     
     g_date1 = st.text_input("第一天日期說明 (整體)", value=st.session_state["g_date1"])
     g_text1 = st.text_area("第一天賽程 (整體)", value=st.session_state["g_text1"], height=180, placeholder="09:00 ｜ 低男單 ｜ 王大明")
@@ -527,13 +522,13 @@ with col_input1:
 
 with col_input2:
     st.header("📝 3. 賽程資料編輯區 (選手個人賽程)")
-    st.info("💡 請先將賽程截圖並用AI處理文字，給AI："依據附圖格式，將所有選手按日期、年級組別（低年級 / 中年級 / 高年級）進行歸類與整合，並列出每位選手參加的項目與所有出場時間。一格貼全部：可直接包含多天日期標題、年級區塊與選手賽程")
+    st.info("💡 請先將賽程截圖並用 AI 處理文字。給 AI 提示詞範例：'依據附圖格式，將所有選手按日期、年級組別進行歸類與整合，並列出每位選手參加的項目與所有出場時間。'")
     
     personal_text = st.text_area(
         "選手個人賽程內容 (一格貼全部)",
         value=st.session_state["personal_text"],
         height=420,
-        placeholder="【2026-11-19】\n低年級\n男  童羿勛 (低男單) : 12:00、14:30\n\n【2026-11-20】\n中年級\n男  林祐頡 (中男雙) : 09:00"
+        placeholder=""
     )
     st.session_state["personal_text"] = personal_text
 
