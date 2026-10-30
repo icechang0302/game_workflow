@@ -512,7 +512,7 @@ col_input1, col_input2 = st.columns(2)
 
 with col_input1:
     st.header("📝 2. 賽程資料編輯區 (整體流程表)")
-    st.info("💡 格式：時間 ｜ 組別 ｜ 選手")
+    st.info("💡請先將賽程截圖並用AI處理文字，給AI："請將這張圖改成可直接複製到網頁的格式(包含斷行)，選手僅帶出XX國小的即可。 格式：時間 ｜ 組別 ｜ 選手 (如： 08:00 | 國小五年級男單 | 王大明)")
     
     g_date1 = st.text_input("第一天日期說明 (整體)", value=st.session_state["g_date1"])
     g_text1 = st.text_area("第一天賽程 (整體)", value=st.session_state["g_text1"], height=180, placeholder="09:00 ｜ 低男單 ｜ 王大明")
@@ -527,7 +527,7 @@ with col_input1:
 
 with col_input2:
     st.header("📝 3. 賽程資料編輯區 (選手個人賽程)")
-    st.info("💡 一格貼全部：可直接包含多天日期標題、年級區塊與選手賽程")
+    st.info("💡 請先將賽程截圖並用AI處理文字，給AI："依據附圖格式，將所有選手按日期、年級組別（低年級 / 中年級 / 高年級）進行歸類與整合，並列出每位選手參加的項目與所有出場時間。一格貼全部：可直接包含多天日期標題、年級區塊與選手賽程")
     
     personal_text = st.text_area(
         "選手個人賽程內容 (一格貼全部)",
