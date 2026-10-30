@@ -498,7 +498,7 @@ with col_c1:
 with col_c2:
     body_font_size = st.slider("內文字體大小 (px)", min_value=18, max_value=40, value=26)
 with col_c3:
-    title_font_size = st.slider("主標題字體大小 (px)", min_value=48, max_value=130, value=100)
+    title_font_size = st.slider("主標題字體大小 (px)", min_value=48, max_value=130, value=66)
 
 st.markdown("---")
 
