@@ -63,9 +63,6 @@ if "personal_text" not in st.session_state:
     st.session_state["personal_text"] = ""
 
 # -----------------------------------------------------------------------------
-# 解析整體流程表文字 → 卡片 HTML
-# -----------------------------------------------------------------------------
-# -----------------------------------------------------------------------------
 # 解析整體流程表文字 → 卡片 HTML (同時間且同組別以「、」自動合併選手)
 # -----------------------------------------------------------------------------
 def parse_text_to_cards(text):
@@ -99,11 +96,9 @@ def parse_text_to_cards(text):
     for time_str in order:
         items_html = ""
         for cate, player_list in groups[time_str]:
-            # 將多組選手以「、」完美串接，確保中間不會漏掉頓號
             players_str = "、".join(player_list)
             players_e = html_lib.escape(players_str)
             if cate:
-                # 嚴格判斷是否包含女且不含男
                 cls = "cate-f" if ("女" in cate and "男" not in cate) else "cate-m"
                 items_html += f'<div class="item"><span class="{cls}">【{html_lib.escape(cate)}】</span>{players_e}</div>'
             else:
@@ -230,7 +225,7 @@ def generate_poster_html(sub_title, main_title, tag_left, tag_right,
                          date1_title, data1_text, date2_title, data2_text,
                          extra_date="", extra_text="",
                          body_font_size=28, theme_name="藍色體系", 
-                         title_font_size=100, mode="整體流程表", preview=True):
+                         title_font_size=66, mode="整體流程表", preview=True):
     theme = THEMES[theme_name]
     bg_color = theme["bg"]
 
@@ -543,7 +538,7 @@ with st.expander("➕ 點此新增更多天數賽程 (整體流程表專用)"):
 
 st.markdown("---")
 
-# 4. 即時預覽與圖片下載 (左右並排呈現兩張海報)
+# 4. 即時預覽與圖片下載 (左右並排呈現兩張海報 - 長度依內容自動調整)
 st.header("🖼️ 4. 即時預覽與圖片下載 (左右兩張)")
 
 col_prev1, col_prev2 = st.columns(2)
@@ -560,7 +555,7 @@ kwargs_gen = dict(
     title_font_size=title_font_size, mode="整體流程表"
 )
 
-# 組裝選手個人賽程參數 (直接傳入整個大文字框)
+# 組裝選手個人賽程參數
 kwargs_per = dict(
     sub_title=sub_title, main_title=main_title,
     tag_left=tag_left_per, tag_right=tag_right,
@@ -574,13 +569,16 @@ with col_prev1:
     st.subheader("🌐 【整體流程表】預覽")
     if g_text1.strip() or g_text2.strip():
         html_g_prev, metric_g = generate_poster_html(preview=True, **kwargs_gen)
-        st.components.v1.html(html_g_prev, height=750, scrolling=False)
+        # 動態計算預覽容器高度，隨內容長度自動調整，寬度維持 100% 欄位寬
+        preview_height_g = int(350 + metric_g * 65)
+        st.components.v1.html(html_g_prev, height=preview_height_g, scrolling=False)
         
         if st.button("🚀 產出【整體流程表】PNG 圖片", type="primary", key="btn_g"):
             with st.spinner("正在轉換為高解析圖片..."):
                 html_g_png, metric_g = generate_poster_html(preview=False, **kwargs_gen)
                 path_g = render_png(html_g_png, metric_g, out_path="general_schedule.png")
                 if os.path.exists(path_g):
+                    # st.image 產出的圖片會自動維持比例並填滿欄位寬度，長度依圖檔內容自動調整
                     st.image(path_g, caption="整體流程表產出預覽", use_container_width=True)
                     with open(path_g, "rb") as f:
                         st.download_button("⬇️ 下載整體流程表 (PNG)", data=f, file_name="整體流程表.png", mime="image/png", key="dl_g")
@@ -591,13 +589,16 @@ with col_prev2:
     st.subheader("🌐 【選手個人賽程】預覽")
     if personal_text.strip():
         html_p_prev, metric_p = generate_poster_html(preview=True, **kwargs_per)
-        st.components.v1.html(html_p_prev, height=750, scrolling=False)
+        # 動態計算個人賽程預覽容器高度，隨內容長度自動調整
+        preview_height_p = int(350 + metric_p * 65)
+        st.components.v1.html(html_p_prev, height=preview_height_p, scrolling=False)
         
         if st.button("🚀 產出【選手個人賽程】PNG 圖片", type="primary", key="btn_p"):
             with st.spinner("正在轉換為高解析圖片..."):
                 html_p_png, metric_p = generate_poster_html(preview=False, **kwargs_per)
                 path_p = render_png(html_p_png, metric_p, out_path="personal_schedule.png")
                 if os.path.exists(path_p):
+                    # st.image 產出的圖片會自動維持比例並填滿欄位寬度，長度依圖檔內容自動調整
                     st.image(path_p, caption="選手個人賽程產出預覽", use_container_width=True)
                     with open(path_p, "rb") as f:
                         st.download_button("⬇️ 下載選手個人賽程 (PNG)", data=f, file_name="選手個人賽程.png", mime="image/png", key="dl_p")
