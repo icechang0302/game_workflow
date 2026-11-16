@@ -224,7 +224,7 @@ def badge_svg(bg):
 </svg>"""
 
 # -----------------------------------------------------------------------------
-# 產生海報 HTML 核心函式
+# 產生海報 HTML 核心函式 (預覽時移除外網字型載入以大幅加速)
 # -----------------------------------------------------------------------------
 def generate_poster_html(sub_title, main_title, tag_left, tag_right,
                          date1_title, data1_text, date2_title, data2_text,
@@ -299,8 +299,7 @@ def generate_poster_html(sub_title, main_title, tag_left, tag_right,
   </div>"""
 
     if preview:
-        font_css = """<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700;800&display=swap" rel="stylesheet">"""
+        font_css = ""
     else:
         b64 = get_font_base64()
         font_css = ""
@@ -329,9 +328,7 @@ def generate_poster_html(sub_title, main_title, tag_left, tag_right,
   }}
   window.addEventListener('load', fit);
   window.addEventListener('resize', fit);
-  if (document.fonts && document.fonts.ready) {{ document.fonts.ready.then(fit); }}
-  setTimeout(fit, 300);
-  setTimeout(fit, 1200);
+  setTimeout(fit, 100);
 </script>"""
 
     wrap_open = '<div id="wrap">' if preview else ''
@@ -506,7 +503,7 @@ with col_c3:
 
 st.markdown("---")
 
-# 2 & 3. 賽程資料編輯區 (左右並排，改用 key 確保輸入不被重置)
+# 2 & 3. 賽程資料編輯區 (左右並排，使用 key 確保輸入不被重置)
 col_input1, col_input2 = st.columns(2)
 
 with col_input1:
@@ -542,7 +539,7 @@ st.header("🖼️ 4. 即時預覽與圖片下載 (左右兩張)")
 
 col_prev1, col_prev2 = st.columns(2)
 
-# 組裝整體流程表參數 (直接讀取 st.session_state)
+# 組裝整體流程表參數
 kwargs_gen = dict(
     sub_title=sub_title, main_title=main_title,
     tag_left=tag_left_gen, tag_right=tag_right,
