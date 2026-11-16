@@ -48,7 +48,7 @@ def get_font_base64():
         return ""
 
 # -----------------------------------------------------------------------------
-# Session State 初始化 (不寫死預設內容)
+# Session State 初始化
 # -----------------------------------------------------------------------------
 if "g_date1" not in st.session_state:
     st.session_state["g_date1"] = ""
@@ -61,6 +61,11 @@ if "g_text2" not in st.session_state:
 
 if "personal_text" not in st.session_state:
     st.session_state["personal_text"] = ""
+
+if "extra_date" not in st.session_state:
+    st.session_state["extra_date"] = ""
+if "extra_gen_text" not in st.session_state:
+    st.session_state["extra_gen_text"] = ""
 
 # -----------------------------------------------------------------------------
 # 解析整體流程表文字 → 卡片 HTML (同時間且同組別以「、」自動合併選手)
@@ -501,40 +506,34 @@ with col_c3:
 
 st.markdown("---")
 
-# 2 & 3. 賽程資料編輯區 (左右並排)
+# 2 & 3. 賽程資料編輯區 (左右並排，改用 key 確保輸入不被重置)
 col_input1, col_input2 = st.columns(2)
 
 with col_input1:
     st.header("📝 2. 賽程資料編輯區 (整體流程表)")
     st.info("💡 請先將賽程截圖並用 AI 處理文字。給 AI 提示詞範例：'請將這張圖改成可直接複製到網頁的格式(包含斷行)，選手僅帶出XX國小的即可。格式：時間 ｜ 組別 ｜ 選手 (如：08:00 | 國小五年級男單 | 王大明)'")
     
-    g_date1 = st.text_input("第一天日期說明 (整體)", value=st.session_state["g_date1"])
-    g_text1 = st.text_area("第一天賽程 (整體)", value=st.session_state["g_text1"], height=180, placeholder="09:00 ｜ 低男單 ｜ 王大明")
+    st.text_input("第一天日期說明 (整體)", key="g_date1")
+    st.text_area("第一天賽程 (整體)", key="g_text1", height=180, placeholder="09:00 ｜ 低男單 ｜ 王大明")
     
-    g_date2 = st.text_input("第二天日期說明 (整體・若無可留空)", value=st.session_state["g_date2"])
-    g_text2 = st.text_area("第二天賽程 (整體)", value=st.session_state["g_text2"], height=180, placeholder="若無第二天請保持空白...")
-
-    st.session_state["g_date1"] = g_date1
-    st.session_state["g_text1"] = g_text1
-    st.session_state["g_date2"] = g_date2
-    st.session_state["g_text2"] = g_text2
+    st.text_input("第二天日期說明 (整體・若無可留空)", key="g_date2")
+    st.text_area("第二天賽程 (整體)", key="g_text2", height=180, placeholder="若無第二天請保持空白...")
 
 with col_input2:
     st.header("📝 3. 賽程資料編輯區 (選手個人賽程)")
     st.info("💡 請先將賽程截圖並用 AI 處理文字。給 AI 提示詞範例：'依據附圖格式，將所有選手按日期、年級組別進行歸類與整合，並列出每位選手參加的項目與所有出場時間。'")
     
-    personal_text = st.text_area(
+    st.text_area(
         "選手個人賽程內容 (一格貼全部)",
-        value=st.session_state["personal_text"],
+        key="personal_text",
         height=420,
         placeholder=""
     )
-    st.session_state["personal_text"] = personal_text
 
 # 額外天數擴充 (僅整體流程表)
 with st.expander("➕ 點此新增更多天數賽程 (整體流程表專用)"):
-    extra_date = st.text_input("額外天數日期說明", value="")
-    extra_gen_text = st.text_area("額外天數賽程 (整體流程表)", value="", height=120)
+    st.text_input("額外天數日期說明", key="extra_date")
+    st.text_area("額外天數賽程 (整體流程表)", key="extra_gen_text", height=120)
 
 st.markdown("---")
 
@@ -543,14 +542,14 @@ st.header("🖼️ 4. 即時預覽與圖片下載 (左右兩張)")
 
 col_prev1, col_prev2 = st.columns(2)
 
-# 組裝整體流程表參數
+# 組裝整體流程表參數 (直接讀取 st.session_state)
 kwargs_gen = dict(
     sub_title=sub_title, main_title=main_title,
     tag_left=tag_left_gen, tag_right=tag_right,
-    date1_title=g_date1, data1_text=g_text1,
-    date2_title=g_date2, data2_text=g_text2,
-    extra_date=extra_date if extra_date.strip() else "",
-    extra_text=extra_gen_text if extra_date.strip() else "",
+    date1_title=st.session_state["g_date1"], data1_text=st.session_state["g_text1"],
+    date2_title=st.session_state["g_date2"], data2_text=st.session_state["g_text2"],
+    extra_date=st.session_state["extra_date"] if st.session_state["extra_date"].strip() else "",
+    extra_text=st.session_state["extra_gen_text"] if st.session_state["extra_date"].strip() else "",
     body_font_size=body_font_size, theme_name=theme_name,
     title_font_size=title_font_size, mode="整體流程表"
 )
@@ -559,7 +558,7 @@ kwargs_gen = dict(
 kwargs_per = dict(
     sub_title=sub_title, main_title=main_title,
     tag_left=tag_left_per, tag_right=tag_right,
-    date1_title="", data1_text=personal_text,
+    date1_title="", data1_text=st.session_state["personal_text"],
     date2_title="", data2_text="",
     body_font_size=body_font_size, theme_name=theme_name,
     title_font_size=title_font_size, mode="選手個人賽程"
@@ -567,9 +566,8 @@ kwargs_per = dict(
 
 with col_prev1:
     st.subheader("🌐 【整體流程表】預覽")
-    if g_text1.strip() or g_text2.strip():
+    if st.session_state["g_text1"].strip() or st.session_state["g_text2"].strip():
         html_g_prev, metric_g = generate_poster_html(preview=True, **kwargs_gen)
-        # 動態計算預覽容器高度，隨內容長度自動調整，寬度維持 100% 欄位寬
         preview_height_g = int(350 + metric_g * 65)
         st.components.v1.html(html_g_prev, height=preview_height_g, scrolling=False)
         
@@ -578,7 +576,6 @@ with col_prev1:
                 html_g_png, metric_g = generate_poster_html(preview=False, **kwargs_gen)
                 path_g = render_png(html_g_png, metric_g, out_path="general_schedule.png")
                 if os.path.exists(path_g):
-                    # st.image 產出的圖片會自動維持比例並填滿欄位寬度，長度依圖檔內容自動調整
                     st.image(path_g, caption="整體流程表產出預覽", use_container_width=True)
                     with open(path_g, "rb") as f:
                         st.download_button("⬇️ 下載整體流程表 (PNG)", data=f, file_name="整體流程表.png", mime="image/png", key="dl_g")
@@ -587,9 +584,8 @@ with col_prev1:
 
 with col_prev2:
     st.subheader("🌐 【選手個人賽程】預覽")
-    if personal_text.strip():
+    if st.session_state["personal_text"].strip():
         html_p_prev, metric_p = generate_poster_html(preview=True, **kwargs_per)
-        # 動態計算個人賽程預覽容器高度，隨內容長度自動調整
         preview_height_p = int(350 + metric_p * 65)
         st.components.v1.html(html_p_prev, height=preview_height_p, scrolling=False)
         
@@ -598,7 +594,6 @@ with col_prev2:
                 html_p_png, metric_p = generate_poster_html(preview=False, **kwargs_per)
                 path_p = render_png(html_p_png, metric_p, out_path="personal_schedule.png")
                 if os.path.exists(path_p):
-                    # st.image 產出的圖片會自動維持比例並填滿欄位寬度，長度依圖檔內容自動調整
                     st.image(path_p, caption="選手個人賽程產出預覽", use_container_width=True)
                     with open(path_p, "rb") as f:
                         st.download_button("⬇️ 下載選手個人賽程 (PNG)", data=f, file_name="選手個人賽程.png", mime="image/png", key="dl_p")
