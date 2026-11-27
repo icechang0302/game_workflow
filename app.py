@@ -298,7 +298,8 @@ THEMES = {
     ),
     # --- 參考賽事海報經典配色 ---
     "主場狂龍暗紅 (經典配色)": dict(
-        bg="#240709", header="#8b1020", male="#1d4f9f", sub="#fca5a5",
+        bg="#240709", bg_gradient="linear-gradient(160deg, #5c0c15 0%, #2b070b 48%, #150305 100%)",
+        header="#8b1020", male="#1d4f9f", sub="#fca5a5",
         title="#ffffff", badge="#fbbf24", date_accent="#fde047",
         tag_l_bg="#fbbf24", tag_l_fg="#240709",
         tag_r_bg="#ffffff", tag_r_fg="#450a0a", tag_r_border="transparent",
@@ -307,7 +308,8 @@ THEMES = {
         tag_m_bg="#dbeafe", tag_m_fg="#1e40af", tag_f_bg="#ffe4e6", tag_f_fg="#be1e4a",
     ),
     "悍將冰藍海藍 (經典配色)": dict(
-        bg="#043970", header="#0c5da5", male="#0369a1", sub="#38bdf8",
+        bg="#043970", bg_gradient="linear-gradient(180deg, #07488a 0%, #04366b 55%, #022044 100%)",
+        header="#0c5da5", male="#0369a1", sub="#38bdf8",
         title="#ffffff", badge="#38bdf8", date_accent="#38bdf8",
         tag_l_bg="#38bdf8", tag_l_fg="#042f5c",
         tag_r_bg="#ffffff", tag_r_fg="#043970", tag_r_border="transparent",
@@ -316,7 +318,8 @@ THEMES = {
         tag_m_bg="#e0f2fe", tag_m_fg="#0369a1", tag_f_bg="#ffe4e6", tag_f_fg="#be1e4a",
     ),
     "勇士電光天藍 (經典配色)": dict(
-        bg="#072b4f", header="#0088ce", male="#0284c7", sub="#7dd3fc",
+        bg="#072b4f", bg_gradient="linear-gradient(180deg, #052242 0%, #0b4c85 58%, #2a8bd1 100%)",
+        header="#0088ce", male="#0284c7", sub="#7dd3fc",
         title="#ffffff", badge="#38bdf8", date_accent="#7dd3fc",
         tag_l_bg="#0088ce", tag_l_fg="#ffffff",
         tag_r_bg="#e0f2fe", tag_r_fg="#072b4f", tag_r_border="transparent",
@@ -325,7 +328,8 @@ THEMES = {
         tag_m_bg="#e0f2fe", tag_m_fg="#0369a1", tag_f_bg="#ffe4e6", tag_f_fg="#be1e4a",
     ),
     "12強藍紅榮耀 (經典配色)": dict(
-        bg="#0a1b47", header="#1a4a8a", male="#1d4ed8", sub="#cbd5e1",
+        bg="#0a1b47", bg_gradient="linear-gradient(135deg, #102e70 0%, #0a1b47 52%, #050d26 100%)",
+        header="#1a4a8a", male="#1d4ed8", sub="#cbd5e1",
         title="#ffffff", badge="#ef4444", date_accent="#f87171",
         tag_l_bg="#b91c1c", tag_l_fg="#ffffff",
         tag_r_bg="#ffffff", tag_r_fg="#0a1b47", tag_r_border="transparent",
@@ -334,7 +338,8 @@ THEMES = {
         tag_m_bg="#dbeafe", tag_m_fg="#1e40af", tag_f_bg="#ffe4e6", tag_f_fg="#be1e4a",
     ),
     "經典賽墨綠沙金 (經典配色)": dict(
-        bg="#0b2e2a", header="#0d7a5f", male="#0d7a5f", sub="#e8dfd3",
+        bg="#0b2e2a", bg_gradient="linear-gradient(165deg, #124a42 0%, #0b2e2a 52%, #061c19 100%)",
+        header="#0d7a5f", male="#0d7a5f", sub="#e8dfd3",
         title="#ffffff", badge="#f5b800", date_accent="#f5b800",
         tag_l_bg="#f5b800", tag_l_fg="#0b2e2a",
         tag_r_bg="#e8dfd3", tag_r_fg="#0b2e2a", tag_r_border="transparent",
@@ -365,13 +370,29 @@ def _mix_hex(hex1, hex2, ratio):
     b = int(b1 * (1 - ratio) + b2 * ratio)
     return f"#{r:02x}{g:02x}{b:02x}"
 
-def build_custom_theme(bg, header, accent, title_color, sub_and_icon_color):
-    """依使用者自選顏色組裝色系，並自動計算反差與卡片邊框。"""
-    is_light_bg = _is_light_color(bg)
+def get_theme_gradient(theme):
+    """取得色系背景漸層；未指定時依主色與標題色自動產生自然漸層。"""
+    if theme.get("bg_gradient"):
+        return theme["bg_gradient"]
+    bg = theme["bg"]
+    header = theme["header"]
+    if _is_light_color(bg):
+        top = _mix_hex(bg, "#ffffff", 0.55)
+        bottom = _mix_hex(bg, header, 0.14)
+    else:
+        top = _mix_hex(bg, header, 0.24)
+        bottom = _mix_hex(bg, "#000000", 0.34)
+    return f"linear-gradient(160deg, {top} 0%, {bg} 48%, {bottom} 100%)"
+
+def build_custom_theme(bg, bg2, header, accent, title_color, sub_and_icon_color):
+    """依使用者自選顏色組裝漸層色系，並自動計算反差與卡片邊框。"""
+    mid_bg = _mix_hex(bg, bg2, 0.5)
+    is_light_bg = _is_light_color(mid_bg)
     is_light_header = _is_light_color(header)
     is_light_accent = _is_light_color(accent)
     return dict(
         bg=bg,
+        bg_gradient=f"linear-gradient(160deg, {bg} 0%, {bg2} 100%)",
         header=header,
         header_fg="#1e293b" if is_light_header else "#ffffff",
         male="#1d4f9f",
@@ -657,7 +678,12 @@ def generate_poster_html(sub_title, main_title, tag_left, tag_right,
                          title_font_size=66, mode="整體流程表", preview=True):
     theme = custom_theme if custom_theme is not None else THEMES[theme_name]
     bg_color = theme["bg"]
+    bg_gradient = get_theme_gradient(theme)
     header_fg = theme.get("header_fg", "#ffffff")
+    # 輸出 PNG 時 body 使用不重複的純色作為裁切基準，讓漸層海報依實際內容高度精準裁切
+    r_bg, g_bg, b_bg = _hex_to_rgb(bg_color)
+    sentinel_bg = "#fe01fe" if g_bg > 180 and r_bg < 80 else "#01fe01"
+    body_bg = bg_color if preview else sentinel_bg
 
     total_metric = 0
     body_content = ""
@@ -789,7 +815,7 @@ def generate_poster_html(sub_title, main_title, tag_left, tag_right,
     margin: 0;
     padding: 0;
     overflow: hidden;
-    background-color: {bg_color};
+    background-color: {body_bg};
   }}
   #wrap {{
     width: 100%;
@@ -798,6 +824,7 @@ def generate_poster_html(sub_title, main_title, tag_left, tag_right,
   }}
   #poster {{
     background-color: {bg_color};
+    background-image: {bg_gradient};
     font-family: 'Noto Sans TC', 'Microsoft JhengHei', 'PingFang TC', sans-serif;
     color: {theme['title']};
     width: {POSTER_WIDTH}px;
@@ -925,7 +952,7 @@ def generate_poster_html(sub_title, main_title, tag_left, tag_right,
 # 輸出 PNG
 # -----------------------------------------------------------------------------
 def render_png(html_str, total_metric, out_path="generated_schedule.png"):
-    tall_height = 1000 + total_metric * 120
+    tall_height = max(2200, 1200 + total_metric * 160)
 
     if os.path.exists(out_path):
         os.remove(out_path)
@@ -942,12 +969,12 @@ def render_png(html_str, total_metric, out_path="generated_schedule.png"):
     hti.screenshot(html_str=html_str, save_as=out_path, size=(POSTER_WIDTH, tall_height))
 
     img = Image.open(out_path).convert("RGB")
-    bg = img.getpixel((2, 2))
-    diff = ImageChops.difference(img, Image.new("RGB", img.size, bg))
+    sentinel_rgb = img.getpixel((2, img.height - 2))
+    diff = ImageChops.difference(img, Image.new("RGB", img.size, sentinel_rgb))
     bbox = diff.getbbox()
     if bbox:
-        new_h = min(bbox[3] + BOTTOM_PAD, img.height)
-        img = img.crop((0, 0, POSTER_WIDTH, new_h))
+        crop_h = bbox[3] - 2 if (bbox[3] < img.height - 4 and bbox[3] > 20) else bbox[3]
+        img = img.crop((0, 0, POSTER_WIDTH, crop_h))
     img.save(out_path)
     return out_path
 
@@ -986,19 +1013,22 @@ with col_c4:
 
 custom_theme = None
 if theme_name == CUSTOM_THEME_LABEL:
-    st.caption("🎨 自訂色盤：可自由挑選背景、標題列與重點色，系統會自動搭配卡片邊框與文字反差。")
-    cp1, cp2, cp3, cp4, cp5 = st.columns(5)
+    st.caption("🎨 自訂色盤：可自由挑選漸層背景、標題列與重點色（上下背景設同色即為純色），系統會自動搭配反差與邊框。")
+    cp1, cp2, cp3 = st.columns(3)
     with cp1:
-        c_bg = st.color_picker("海報背景色", "#fce7f3", key="cp_bg")
+        c_bg = st.color_picker("背景漸層色 (上)", "#fce7f3", key="cp_bg")
     with cp2:
-        c_header = st.color_picker("卡片標題列色", "#ec4899", key="cp_header")
+        c_bg2 = st.color_picker("背景漸層色 (下)", "#f9a8d4", key="cp_bg2")
     with cp3:
-        c_accent = st.color_picker("徽章與左側標籤色", "#facc15", key="cp_accent")
+        c_header = st.color_picker("卡片標題列色", "#db2777", key="cp_header")
+    cp4, cp5, cp6 = st.columns(3)
     with cp4:
-        c_title = st.color_picker("主標題文字色", "#831843", key="cp_title")
+        c_accent = st.color_picker("徽章與左側標籤色", "#facc15", key="cp_accent")
     with cp5:
+        c_title = st.color_picker("主標題文字色", "#831843", key="cp_title")
+    with cp6:
         c_sub = st.color_picker("副標題與喇叭色", "#be185d", key="cp_sub")
-    custom_theme = build_custom_theme(c_bg, c_header, c_accent, c_title, c_sub)
+    custom_theme = build_custom_theme(c_bg, c_bg2, c_header, c_accent, c_title, c_sub)
 
 badge_file = st.file_uploader(
     "頂部圖示 / 隊徽 (選填，未上傳則使用預設羽球圖示)",
