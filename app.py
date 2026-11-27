@@ -12,13 +12,13 @@ from html2image import Html2Image
 st.set_page_config(
     page_title="羽球隊賽程圖片產生器 (雙表同步)",
     page_icon="🏸",
-    layout="wide"
+    layout="wide",
 )
 
-POSTER_WIDTH = 1080      # 海報固定寬度 (px)
-BOTTOM_PAD = 120         # 海報底部留白 (px)
-FEMALE_COLOR = "#be1e4a" # 女子組別文字色
-ACCENT_YELLOW = "#f0c030"  # 黃色標籤與圖示
+POSTER_WIDTH = 1080       # 海報固定寬度 (px)
+BOTTOM_PAD = 120          # 海報底部留白 (px)
+FEMALE_COLOR = "#be1e4a"  # 女子組別文字色
+ACCENT_YELLOW = "#f0c030" # 黃色標籤與圖示
 
 # 色系設定（含原有深色系與新增亮色系）
 THEMES = {
@@ -351,6 +351,17 @@ THEMES = {
 
 CUSTOM_THEME_LABEL = "🎨 自訂色系 (自行選色)"
 
+NOTICE_SYMBOL_OPTIONS = [
+    "喇叭",
+    "驚嘆號",
+    "獎盃",
+    "羽球",
+    "星星",
+    "火焰",
+    "提醒鈴鐺",
+    "不顯示符號",
+]
+
 def _hex_to_rgb(hex_str):
     h = hex_str.lstrip("#")
     if len(h) != 6:
@@ -438,7 +449,7 @@ def get_font_base64():
 # Session State 初始化
 # -----------------------------------------------------------------------------
 MAX_TOTAL_DAYS = 10
-MAX_EXTRA_DAYS = MAX_TOTAL_DAYS - 2  # 主編輯區已有第 1、2 天，最多再擴充 8 天（共 10 天）
+MAX_EXTRA_DAYS = MAX_TOTAL_DAYS - 2
 
 if "g_date1" not in st.session_state:
     st.session_state["g_date1"] = ""
@@ -464,7 +475,7 @@ for _idx in range(1, MAX_EXTRA_DAYS + 1):
 # 解析整體流程表文字 → 卡片 HTML (同時間且同組別以「、」自動合併選手)
 # -----------------------------------------------------------------------------
 def parse_text_to_cards(text):
-    groups = {}   
+    groups = {}
     order = []
     lines = [l.strip() for l in text.strip().split("\n") if l.strip()]
     for line in lines:
@@ -476,11 +487,11 @@ def parse_text_to_cards(text):
             time_str, cate, players = parts[0], "", parts[1]
         else:
             continue
-            
+
         if time_str not in groups:
             groups[time_str] = []
             order.append(time_str)
-            
+
         found = False
         for entry in groups[time_str]:
             if entry[0] == cate:
@@ -501,7 +512,7 @@ def parse_text_to_cards(text):
                 items_html += f'<div class="item"><span class="{cls}">【{html_lib.escape(cate)}】</span>{players_e}</div>'
             else:
                 items_html += f'<div class="item">{players_e}</div>'
-                
+
         cards_html += f"""
         <div class="card">
           <div class="time-header">{html_lib.escape(time_str)}</div>
@@ -516,20 +527,27 @@ def parse_personal_integrated_text(text):
     blocks = []
     current_date_title = ""
     current_lines = []
-    
+
     lines = text.strip().split("\n")
     for line in lines:
         raw_l = line.strip()
         if not raw_l:
             continue
-        if ("【" in raw_l and "】" in raw_l) or ("月" in raw_l and ":" not in raw_l and "｜" not in raw_l and "|" not in raw_l and "男" not in raw_l and "女" not in raw_l):
+        if ("【" in raw_l and "】" in raw_l) or (
+            "月" in raw_l
+            and ":" not in raw_l
+            and "｜" not in raw_l
+            and "|" not in raw_l
+            and "男" not in raw_l
+            and "女" not in raw_l
+        ):
             if current_lines or current_date_title:
                 blocks.append((current_date_title, current_lines))
                 current_lines = []
             current_date_title = raw_l
         else:
             current_lines.append(raw_l)
-            
+
     if current_lines or current_date_title:
         blocks.append((current_date_title, current_lines))
 
@@ -539,11 +557,11 @@ def parse_personal_integrated_text(text):
     for date_title, block_lines in blocks:
         if date_title:
             full_html += f'<div class="p-main-date">{html_lib.escape(date_title)}</div>'
-            
+
         sections = {}
         sec_order = []
         current_sec = "選手個人賽程"
-        
+
         for line in block_lines:
             if "｜" in line or "|" in line:
                 parts = [p.strip() for p in line.replace("｜", "|").split("|")]
@@ -558,7 +576,7 @@ def parse_personal_integrated_text(text):
                     sections[current_sec] = []
                     sec_order.append(current_sec)
                 continue
-                
+
             if current_sec not in sections:
                 sections[current_sec] = []
                 sec_order.append(current_sec)
@@ -569,29 +587,29 @@ def parse_personal_integrated_text(text):
             if not items:
                 continue
             total_metric += len(items) + 1
-            
+
             rows_html = ""
             for item in items:
                 parts = item.split(":", 1)
                 left_part = parts[0].strip()
                 time_part = parts[1].strip() if len(parts) > 1 else ""
-                
+
                 if left_part.startswith("女") or ("女" in left_part and "男" not in left_part):
                     gender = "女"
                     name_cate = left_part[1:].strip() if left_part.startswith("女") else left_part
                 else:
                     gender = "男"
                     name_cate = left_part[1:].strip() if (left_part.startswith("男") or left_part.startswith("女")) else left_part
-                
+
                 gender_class = "gender-f" if gender == "女" else "gender-m"
-                
+
                 rows_html += f"""
                 <div class="p-row">
                   <span class="gender-badge {gender_class}">{gender}</span>
                   <span class="p-main-text">{html_lib.escape(name_cate)} : {html_lib.escape(time_part)}</span>
                 </div>
                 """
-                
+
             full_html += f"""
             <div class="p-section-title">{html_lib.escape(sec)}</div>
             <div class="p-box">
@@ -602,7 +620,7 @@ def parse_personal_integrated_text(text):
     return full_html, max(1, total_metric)
 
 # -----------------------------------------------------------------------------
-# 羽球拍與羽球組合專屬圖示 (預設圖示) 與 公告喇叭圖示
+# 羽球拍與羽球組合專屬圖示 (預設圖示) 與 公告前導符號
 # -----------------------------------------------------------------------------
 def badge_svg(bg, accent=ACCENT_YELLOW):
     return f"""<svg width="68" height="76" viewBox="0 0 68 76" xmlns="http://www.w3.org/2000/svg">
@@ -616,7 +634,43 @@ def badge_svg(bg, accent=ACCENT_YELLOW):
   <path d="M48 33 L56 30" stroke="{bg}" stroke-width="1.5"/>
 </svg>"""
 
-def notice_svg(color, size=34):
+def notice_symbol_svg(symbol_name, color, size=34):
+    if symbol_name == "不顯示符號":
+        return ""
+    if symbol_name == "驚嘆號":
+        return f"""<svg width="{size}" height="{size}" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink: 0;">
+  <circle cx="18" cy="18" r="14" stroke="{color}" stroke-width="3"/>
+  <rect x="16.2" y="9" width="3.6" height="11.5" rx="1.8" fill="{color}"/>
+  <circle cx="18" cy="25.2" r="2.2" fill="{color}"/>
+</svg>"""
+    if symbol_name == "獎盃":
+        return f"""<svg width="{size}" height="{size}" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink: 0;">
+  <path d="M11 7H25V16C25 20.4 21.9 23.5 18 23.5C14.1 23.5 11 20.4 11 16V7Z" fill="{color}"/>
+  <path d="M11 10H6.5C6.5 14.5 9 17 11.5 17.5" stroke="{color}" stroke-width="2.6" stroke-linecap="round"/>
+  <path d="M25 10H29.5C29.5 14.5 27 17 24.5 17.5" stroke="{color}" stroke-width="2.6" stroke-linecap="round"/>
+  <path d="M18 23.5V28.5M12 29.5H24" stroke="{color}" stroke-width="3" stroke-linecap="round"/>
+</svg>"""
+    if symbol_name == "羽球":
+        return f"""<svg width="{size}" height="{size}" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink: 0;">
+  <path d="M14 10L26 22L21.5 28.5L8.5 15.5L14 10Z" fill="{color}" opacity="0.9"/>
+  <ellipse cx="10.5" cy="25.5" rx="4.2" ry="4.2" fill="{color}"/>
+  <path d="M13.5 22.5L19 17" stroke="{color}" stroke-width="2.8" stroke-linecap="round"/>
+</svg>"""
+    if symbol_name == "星星":
+        return f"""<svg width="{size}" height="{size}" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink: 0;">
+  <path d="M18 5L21.8 13.1L30.7 14.2L24.2 20.3L25.9 29.2L18 24.7L10.1 29.2L11.8 20.3L5.3 14.2L14.2 13.1L18 5Z" fill="{color}"/>
+</svg>"""
+    if symbol_name == "火焰":
+        return f"""<svg width="{size}" height="{size}" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink: 0;">
+  <path d="M19.5 4.5C19.5 4.5 27 10.5 27 19.5C27 25.3 22.8 30.5 17.5 30.5C12.2 30.5 8.5 26.2 8.5 21C8.5 16.5 11.8 12.8 14 10.8C13.6 13.4 14.8 15 16.2 15C15.5 10.8 17.5 7 19.5 4.5Z" fill="{color}"/>
+</svg>"""
+    if symbol_name == "提醒鈴鐺":
+        return f"""<svg width="{size}" height="{size}" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink: 0;">
+  <path d="M18 6C13.6 6 10.5 9.4 10.5 14V20.5L7.5 24.5H28.5L25.5 20.5V14C25.5 9.4 22.4 6 18 6Z" fill="{color}"/>
+  <path d="M15 26.5C15.5 28.5 16.7 29.5 18 29.5C19.3 29.5 20.5 28.5 21 26.5" stroke="{color}" stroke-width="2.6" stroke-linecap="round"/>
+</svg>"""
+
+    # 預設：喇叭
     return f"""<svg width="{size}" height="{size}" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink: 0;">
   <g transform="rotate(-10 18 18)">
     <path d="M8 14.5L23.5 8V28L8 21.5V14.5Z" fill="{color}" stroke="{color}" stroke-width="1.8" stroke-linejoin="round"/>
@@ -673,7 +727,8 @@ def uploaded_file_to_data_uri(uploaded_file):
 def generate_poster_html(sub_title, main_title, tag_left, tag_right,
                          date1_title, data1_text, date2_title, data2_text,
                          extra_date="", extra_text="", extra_days=None,
-                         notice_text="", notice_font_size=26, badge_data_uri="",
+                         notice_text="", notice_symbol="喇叭", notice_font_size=26,
+                         badge_mode="預設羽球圖示", badge_data_uri="",
                          body_font_size=28, theme_name="藍色體系", custom_theme=None,
                          title_font_size=66, mode="整體流程表", preview=True):
     theme = custom_theme if custom_theme is not None else THEMES[theme_name]
@@ -732,32 +787,39 @@ def generate_poster_html(sub_title, main_title, tag_left, tag_right,
     has_tag_l = bool(tag_left.strip())
     has_tag_r = bool(tag_right.strip())
     has_notice = bool(notice_clean)
-    
-    sub_html = f'<div class="sub-title">{sub_title}</div>' if has_sub else ''
-    main_html = f'<div class="main-title">{main_title}</div>' if has_main else ''
-    
+
+    sub_html = f'<div class="sub-title">{sub_title}</div>' if has_sub else ""
+    main_html = f'<div class="main-title">{main_title}</div>' if has_main else ""
+
     tags_inner = ""
     if has_tag_l:
         tags_inner += f'<span class="tag-yellow">{tag_left}</span>'
     if has_tag_r:
         tags_inner += f'<span class="tag-white">{tag_right}</span>'
-        
-    tags_html = f'<div class="tags">{tags_inner}</div>' if (has_tag_l or has_tag_r) else ''
-    notice_icon_size = max(24, int(notice_font_size * 1.25))
+
+    tags_html = f'<div class="tags">{tags_inner}</div>' if (has_tag_l or has_tag_r) else ""
+    notice_icon_size = max(28, int(title_font_size * 0.72))
+    symbol_html = notice_symbol_svg(notice_symbol, theme["notice_icon"], size=notice_icon_size)
     notice_html = (
-        f'<div class="notice-banner">{notice_svg(theme["notice_icon"], size=notice_icon_size)}'
+        f'<div class="notice-banner">{symbol_html}'
         f'<span class="notice-text">{notice_clean}</span></div>'
-        if has_notice else ''
+        if has_notice else ""
     )
 
-    if badge_data_uri:
+    show_badge = True
+    if badge_mode == "不顯示頂部圖示":
+        show_badge = False
+        badge_inner = ""
+    elif badge_mode == "自訂上傳圖示" and badge_data_uri:
+        badge_inner = f'<img src="{badge_data_uri}" alt="badge" class="badge-img" />'
+    elif badge_data_uri:
         badge_inner = f'<img src="{badge_data_uri}" alt="badge" class="badge-img" />'
     else:
         badge_inner = badge_svg(bg_color, theme["badge"])
 
-    has_header_content = bool(badge_data_uri or has_sub or has_main or has_tag_l or has_tag_r or has_notice)
-    badge_html = f'<div class="badge-icon">{badge_inner}</div>' if has_header_content else ''
-    
+    has_header_content = bool(show_badge or has_sub or has_main or has_tag_l or has_tag_r or has_notice)
+    badge_html = f'<div class="badge-icon">{badge_inner}</div>' if show_badge else ""
+
     header_content = ""
     if has_header_content:
         header_content = f"""
@@ -802,8 +864,8 @@ def generate_poster_html(sub_title, main_title, tag_left, tag_right,
   setTimeout(fit, 100);
 </script>"""
 
-    wrap_open = '<div id="wrap">' if preview else ''
-    wrap_close = '</div>' if preview else ''
+    wrap_open = '<div id="wrap">' if preview else ""
+    wrap_close = "</div>" if preview else ""
 
     html_content = f"""<!DOCTYPE html>
 <html>
@@ -863,7 +925,7 @@ def generate_poster_html(sub_title, main_title, tag_left, tag_right,
     width: 100%;
     box-sizing: border-box;
     margin-top: 22px;
-    padding: 14px 28px;
+    padding: 18px 32px;
     border-radius: 999px;
     background-color: {theme['notice_bg']};
     border: 2px solid {theme['notice_border']};
@@ -871,12 +933,14 @@ def generate_poster_html(sub_title, main_title, tag_left, tag_right,
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 14px;
+    gap: 16px;
   }}
   .notice-text {{
-    font-size: {notice_font_size}px;
+    font-family: 'Noto Sans TC', 'Microsoft JhengHei', 'PingFang TC', sans-serif;
+    font-size: {title_font_size}px;
     font-weight: 800;
-    line-height: 1.4;
+    line-height: 1.2;
+    letter-spacing: 1px;
     text-align: left;
   }}
   .section-container {{ width: 100%; }}
@@ -982,7 +1046,7 @@ def render_png(html_str, total_metric, out_path="generated_schedule.png"):
 # 主畫面 (雙表並排架構)
 # -----------------------------------------------------------------------------
 st.title("🏸 羽球隊賽程圖片產生器 (雙表同步產出)")
-st.write(f"請在下方設定共用樣式，並分別填入**整體流程表**與**選手個人賽程**資料，系統將同時產出兩張完整海報！")
+st.write("請在下方設定共用樣式，並分別填入**整體流程表**與**選手個人賽程**資料，系統將同時產出兩張完整海報！")
 
 # 1. 標題、版型與樣式設定
 st.header("⚙️ 1. 標題、版型與樣式設定 (兩張表共用)")
@@ -991,14 +1055,19 @@ with col_s1:
     main_title = st.text_input("主標題 (選填)", value="MAUC 秋季賽")
     sub_title = st.text_input("副標題 / 隊伍名稱 (選填)", value="2026年牧羽盃全國四季聯賽")
     notice_text = st.text_input(
-        "公告 / 注意事項橫幅 (選填，前方會自動加上喇叭符號)",
+        "公告 / 注意事項橫幅 (選填，字體與主標題一致)",
         value="",
-        placeholder="例如：此賽事需要全隊低中高年級團進團出，再請留意！"
+        placeholder="例如：此賽事需要全隊低中高年級團進團出，再請留意！",
     )
 with col_s2:
     tag_right = st.text_input("右側標籤 / 日期 (選填)", value="日期：2026/09/28（一）")
     tag_left_gen = st.text_input("整體流程表左側標籤", value="整體流程表")
     tag_left_per = st.text_input("選手個人賽程左側標籤", value="選手個人賽程")
+    notice_symbol = st.selectbox(
+        "公告橫幅前方符號",
+        NOTICE_SYMBOL_OPTIONS,
+        index=0,
+    )
 
 col_c1, col_c2, col_c3, col_c4 = st.columns(4)
 with col_c1:
@@ -1007,9 +1076,9 @@ with col_c1:
 with col_c2:
     body_font_size = st.slider("內文字體大小 (px)", min_value=18, max_value=40, value=26)
 with col_c3:
-    title_font_size = st.slider("主標題字體大小 (px)", min_value=48, max_value=130, value=66)
+    title_font_size = st.slider("主標題與公告字體大小 (px)", min_value=48, max_value=130, value=66)
 with col_c4:
-    notice_font_size = st.slider("公告橫幅字體大小 (px)", min_value=18, max_value=44, value=26)
+    notice_font_size = st.slider("公告橫幅字體大小 (px，與主標題同步)", min_value=18, max_value=130, value=title_font_size)
 
 custom_theme = None
 if theme_name == CUSTOM_THEME_LABEL:
@@ -1030,13 +1099,23 @@ if theme_name == CUSTOM_THEME_LABEL:
         c_sub = st.color_picker("副標題與喇叭色", "#be185d", key="cp_sub")
     custom_theme = build_custom_theme(c_bg, c_bg2, c_header, c_accent, c_title, c_sub)
 
-badge_file = st.file_uploader(
-    "頂部圖示 / 隊徽 (選填，未上傳則使用預設羽球圖示)",
-    type=["png", "jpg", "jpeg", "webp", "svg"],
-    key="badge_upload",
-    help="預設顯示內建羽球拍圖示；上傳圖片後將自動取代頂部圖示（建議使用去背 PNG 或 SVG）。"
-)
+col_b1, col_b2 = st.columns([1.2, 2.8])
+with col_b1:
+    badge_mode = st.selectbox(
+        "頂部圖示顯示方式",
+        ["預設羽球圖示", "自訂上傳圖示", "不顯示頂部圖示"],
+        index=0,
+    )
+with col_b2:
+    badge_file = st.file_uploader(
+        "頂部圖示 / 隊徽 (選填，未上傳則使用預設羽球圖示)",
+        type=["png", "jpg", "jpeg", "webp", "svg"],
+        key="badge_upload",
+        help="預設顯示內建羽球拍圖示；上傳圖片後將自動取代頂部圖示（建議使用去背 PNG 或 SVG）。",
+    )
 badge_data_uri = uploaded_file_to_data_uri(badge_file)
+if badge_data_uri and badge_mode == "預設羽球圖示":
+    badge_mode = "自訂上傳圖示"
 
 st.markdown("---")
 
@@ -1046,22 +1125,22 @@ col_input1, col_input2 = st.columns(2)
 with col_input1:
     st.header("📝 2. 賽程資料編輯區 (整體流程表)")
     st.info("💡 請先將賽程截圖並用 AI 處理文字。給 AI 提示詞範例：'請將這張圖改成可直接複製到網頁的格式(包含斷行)，選手僅帶出XX國小的即可。格式：時間 ｜ 組別 ｜ 選手 (如：08:00 | 國小五年級男單 | 王大明)'")
-    
+
     st.text_input("第一天日期說明 (整體)", key="g_date1")
     st.text_area("第一天賽程 (整體)", key="g_text1", height=180, placeholder="09:00 ｜ 低男單 ｜ 王大明")
-    
+
     st.text_input("第二天日期說明 (整體・若無可留空)", key="g_date2")
     st.text_area("第二天賽程 (整體)", key="g_text2", height=180, placeholder="若無第二天請保持空白...")
 
 with col_input2:
     st.header("📝 3. 賽程資料編輯區 (選手個人賽程)")
     st.info("💡 請先將賽程截圖並用 AI 處理文字。給 AI 提示詞範例：'依據附圖格式，將所有選手按日期、年級組別進行歸類與整合，並列出每位選手參加的項目與所有出場時間。'")
-    
+
     st.text_area(
         "選手個人賽程內容 (一格貼全部)",
         key="personal_text",
         height=420,
-        placeholder=""
+        placeholder="",
     )
 
 def _add_extra_day():
@@ -1124,30 +1203,50 @@ has_gen_content = (
 
 # 組裝整體流程表參數
 kwargs_gen = dict(
-    sub_title=sub_title, main_title=main_title,
-    tag_left=tag_left_gen, tag_right=tag_right,
-    date1_title=st.session_state["g_date1"], data1_text=st.session_state["g_text1"],
-    date2_title=st.session_state["g_date2"], data2_text=st.session_state["g_text2"],
+    sub_title=sub_title,
+    main_title=main_title,
+    tag_left=tag_left_gen,
+    tag_right=tag_right,
+    date1_title=st.session_state["g_date1"],
+    data1_text=st.session_state["g_text1"],
+    date2_title=st.session_state["g_date2"],
+    data2_text=st.session_state["g_text2"],
     extra_days=extra_days_payload,
-    notice_text=notice_text, notice_font_size=notice_font_size,
+    notice_text=notice_text,
+    notice_symbol=notice_symbol,
+    notice_font_size=title_font_size,
+    badge_mode=badge_mode,
     badge_data_uri=badge_data_uri,
-    body_font_size=body_font_size, theme_name=theme_name, custom_theme=custom_theme,
-    title_font_size=title_font_size, mode="整體流程表"
+    body_font_size=body_font_size,
+    theme_name=theme_name,
+    custom_theme=custom_theme,
+    title_font_size=title_font_size,
+    mode="整體流程表",
 )
 
 # 組裝選手個人賽程參數
 kwargs_per = dict(
-    sub_title=sub_title, main_title=main_title,
-    tag_left=tag_left_per, tag_right=tag_right,
-    date1_title="", data1_text=st.session_state["personal_text"],
-    date2_title="", data2_text="",
-    notice_text=notice_text, notice_font_size=notice_font_size,
+    sub_title=sub_title,
+    main_title=main_title,
+    tag_left=tag_left_per,
+    tag_right=tag_right,
+    date1_title="",
+    data1_text=st.session_state["personal_text"],
+    date2_title="",
+    data2_text="",
+    notice_text=notice_text,
+    notice_symbol=notice_symbol,
+    notice_font_size=title_font_size,
+    badge_mode=badge_mode,
     badge_data_uri=badge_data_uri,
-    body_font_size=body_font_size, theme_name=theme_name, custom_theme=custom_theme,
-    title_font_size=title_font_size, mode="選手個人賽程"
+    body_font_size=body_font_size,
+    theme_name=theme_name,
+    custom_theme=custom_theme,
+    title_font_size=title_font_size,
+    mode="選手個人賽程",
 )
 
-notice_extra_px = (notice_font_size + 44) if notice_text.strip() else 0
+notice_extra_px = (title_font_size + 56) if notice_text.strip() else 0
 
 with col_prev1:
     st.subheader("🌐 【整體流程表】預覽")
@@ -1155,7 +1254,7 @@ with col_prev1:
         html_g_prev, metric_g = generate_poster_html(preview=True, **kwargs_gen)
         preview_height_g = int(350 + notice_extra_px + metric_g * 65)
         st.components.v1.html(html_g_prev, height=preview_height_g, scrolling=False)
-        
+
         if st.button("🚀 產出【整體流程表】PNG 圖片", type="primary", key="btn_g"):
             with st.spinner("正在轉換為高解析圖片..."):
                 html_g_png, metric_g = generate_poster_html(preview=False, **kwargs_gen)
@@ -1173,7 +1272,7 @@ with col_prev2:
         html_p_prev, metric_p = generate_poster_html(preview=True, **kwargs_per)
         preview_height_p = int(350 + notice_extra_px + metric_p * 65)
         st.components.v1.html(html_p_prev, height=preview_height_p, scrolling=False)
-        
+
         if st.button("🚀 產出【選手個人賽程】PNG 圖片", type="primary", key="btn_p"):
             with st.spinner("正在轉換為高解析圖片..."):
                 html_p_png, metric_p = generate_poster_html(preview=False, **kwargs_per)
