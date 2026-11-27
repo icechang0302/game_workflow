@@ -241,7 +241,113 @@ THEMES = {
         notice_bg="#f1f5f9", notice_border="#94a3b8", notice_fg="#0f172a", notice_icon="#e11d48",
         tag_m_bg="#e2e8f0", tag_m_fg="#1e293b", tag_f_bg="#ffe4e6", tag_f_fg="#be1e4a",
     ),
+    # --- 更多粉色系 ---
+    "粉霧玫瑰體系": dict(
+        bg="#501230", header="#be185d", male="#1d4f9f", sub="#fbcfe8",
+        title="#ffffff", badge=ACCENT_YELLOW, date_accent=ACCENT_YELLOW,
+        tag_l_bg=ACCENT_YELLOW, tag_l_fg="#1f1a05",
+        tag_r_bg="#ffffff", tag_r_fg="#500724", tag_r_border="transparent",
+        card_border="transparent",
+        notice_bg="#fdf2f8", notice_border="#f472b6", notice_fg="#500724", notice_icon="#db2777",
+        tag_m_bg="#dbeafe", tag_m_fg="#1e40af", tag_f_bg="#ffe4e6", tag_f_fg="#be1e4a",
+    ),
+    "甜美粉紅 (亮色)": dict(
+        bg="#fdf2f8", header="#ec4899", male="#1d4ed8", sub="#9d174d",
+        title="#831843", badge="#ec4899", date_accent="#be185d",
+        tag_l_bg="#facc15", tag_l_fg="#500724",
+        tag_r_bg="#ffffff", tag_r_fg="#9d174d", tag_r_border="#f9a8d4",
+        card_border="#fbcfe8",
+        notice_bg="#ffffff", notice_border="#f472b6", notice_fg="#831843", notice_icon="#ec4899",
+        tag_m_bg="#dbeafe", tag_m_fg="#1e40af", tag_f_bg="#fce7f3", tag_f_fg="#be185d",
+    ),
+    "草莓牛奶 (亮色)": dict(
+        bg="#fce7f3", header="#db2777", male="#1d4ed8", sub="#9d174d",
+        title="#500724", badge="#db2777", date_accent="#be185d",
+        tag_l_bg="#fde047", tag_l_fg="#500724",
+        tag_r_bg="#ffffff", tag_r_fg="#831843", tag_r_border="#f472b6",
+        card_border="#f9a8d4",
+        notice_bg="#ffffff", notice_border="#ec4899", notice_fg="#500724", notice_icon="#db2777",
+        tag_m_bg="#dbeafe", tag_m_fg="#1e40af", tag_f_bg="#ffe4e6", tag_f_fg="#be1e4a",
+    ),
+    "蜜桃粉橘 (亮色)": dict(
+        bg="#fff5f5", header="#fb7185", male="#0369a1", sub="#be123c",
+        title="#4c0519", badge="#f43f5e", date_accent="#e11d48",
+        tag_l_bg="#fde047", tag_l_fg="#4c0519",
+        tag_r_bg="#ffffff", tag_r_fg="#9f1239", tag_r_border="#fda4af",
+        card_border="#fecdd3",
+        notice_bg="#ffffff", notice_border="#fda4af", notice_fg="#881337", notice_icon="#f43f5e",
+        tag_m_bg="#e0f2fe", tag_m_fg="#0369a1", tag_f_bg="#ffe4e6", tag_f_fg="#be1e4a",
+    ),
+    "乾燥玫瑰 (亮色)": dict(
+        bg="#fdf4f5", header="#b9385b", male="#1e40af", sub="#881337",
+        title="#4a1024", badge="#b9385b", date_accent="#9f1239",
+        tag_l_bg="#fbbf24", tag_l_fg="#4a1024",
+        tag_r_bg="#ffffff", tag_r_fg="#881337", tag_r_border="#e5a3b3",
+        card_border="#f3d0d7",
+        notice_bg="#ffffff", notice_border="#d9778f", notice_fg="#4a1024", notice_icon="#b9385b",
+        tag_m_bg="#dbeafe", tag_m_fg="#1e40af", tag_f_bg="#ffe4e6", tag_f_fg="#be1e4a",
+    ),
+    "粉紫丁香 (亮色)": dict(
+        bg="#fae8ff", header="#c026d3", male="#1d4ed8", sub="#86198f",
+        title="#4a044e", badge="#c026d3", date_accent="#a21caf",
+        tag_l_bg="#fde047", tag_l_fg="#4a044e",
+        tag_r_bg="#ffffff", tag_r_fg="#86198f", tag_r_border="#f0abfc",
+        card_border="#f5d0fe",
+        notice_bg="#ffffff", notice_border="#e879f9", notice_fg="#4a044e", notice_icon="#c026d3",
+        tag_m_bg="#dbeafe", tag_m_fg="#1e40af", tag_f_bg="#fae8ff", tag_f_fg="#a21caf",
+    ),
 }
+
+CUSTOM_THEME_LABEL = "🎨 自訂色系 (自行選色)"
+
+def _hex_to_rgb(hex_str):
+    h = hex_str.lstrip("#")
+    if len(h) != 6:
+        return (19, 33, 75)
+    return tuple(int(h[i:i + 2], 16) for i in (0, 2, 4))
+
+def _is_light_color(hex_str):
+    r, g, b = _hex_to_rgb(hex_str)
+    luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255.0
+    return luminance >= 0.6
+
+def _mix_hex(hex1, hex2, ratio):
+    r1, g1, b1 = _hex_to_rgb(hex1)
+    r2, g2, b2 = _hex_to_rgb(hex2)
+    r = int(r1 * (1 - ratio) + r2 * ratio)
+    g = int(g1 * (1 - ratio) + g2 * ratio)
+    b = int(b1 * (1 - ratio) + b2 * ratio)
+    return f"#{r:02x}{g:02x}{b:02x}"
+
+def build_custom_theme(bg, header, accent, title_color, sub_and_icon_color):
+    """依使用者自選顏色組裝色系，並自動計算反差與卡片邊框。"""
+    is_light_bg = _is_light_color(bg)
+    is_light_header = _is_light_color(header)
+    is_light_accent = _is_light_color(accent)
+    return dict(
+        bg=bg,
+        header=header,
+        header_fg="#1e293b" if is_light_header else "#ffffff",
+        male="#1d4f9f",
+        sub=sub_and_icon_color,
+        title=title_color,
+        badge=accent,
+        date_accent=header if is_light_bg else accent,
+        tag_l_bg=accent,
+        tag_l_fg="#1e293b" if is_light_accent else "#ffffff",
+        tag_r_bg="#ffffff",
+        tag_r_fg="#1e293b",
+        tag_r_border=_mix_hex(header, "#ffffff", 0.55) if is_light_bg else "transparent",
+        card_border=_mix_hex(header, "#ffffff", 0.65) if is_light_bg else "transparent",
+        notice_bg="#ffffff" if is_light_bg else "#fef7e6",
+        notice_border=accent,
+        notice_fg="#1e293b",
+        notice_icon=sub_and_icon_color if is_light_bg else header,
+        tag_m_bg="#dbeafe",
+        tag_m_fg="#1e40af",
+        tag_f_bg="#ffe4e6",
+        tag_f_fg="#be1e4a",
+    )
 
 # -----------------------------------------------------------------------------
 # 中文字型 (PNG 用：轉成 base64 內嵌)
@@ -501,10 +607,11 @@ def generate_poster_html(sub_title, main_title, tag_left, tag_right,
                          date1_title, data1_text, date2_title, data2_text,
                          extra_date="", extra_text="", extra_days=None,
                          notice_text="", notice_font_size=26, badge_data_uri="",
-                         body_font_size=28, theme_name="藍色體系", 
+                         body_font_size=28, theme_name="藍色體系", custom_theme=None,
                          title_font_size=66, mode="整體流程表", preview=True):
-    theme = THEMES[theme_name]
+    theme = custom_theme if custom_theme is not None else THEMES[theme_name]
     bg_color = theme["bg"]
+    header_fg = theme.get("header_fg", "#ffffff")
 
     total_metric = 0
     body_content = ""
@@ -701,7 +808,7 @@ def generate_poster_html(sub_title, main_title, tag_left, tag_right,
   }}
   .section-container {{ width: 100%; }}
   .section-title {{
-    background-color: {theme['header']}; color: #ffffff; text-align: center;
+    background-color: {theme['header']}; color: {header_fg}; text-align: center;
     font-size: {body_font_size}px; font-weight: 700; padding: 14px;
     border-radius: 12px; margin: 26px 0 20px 0;
   }}
@@ -716,7 +823,7 @@ def generate_poster_html(sub_title, main_title, tag_left, tag_right,
   }}
   .time-header {{
     background-color: {theme['header']}; text-align: center; padding: 16px 0;
-    font-size: {body_font_size}px; font-weight: 700; color: #ffffff; line-height: 1.4;
+    font-size: {body_font_size}px; font-weight: 700; color: {header_fg}; line-height: 1.4;
   }}
   .content {{
     flex: 1; background-color: #ffffff; padding: 16px 28px;
@@ -732,7 +839,7 @@ def generate_poster_html(sub_title, main_title, tag_left, tag_right,
     text-align: center; margin: 30px 0 14px 0; letter-spacing: 1px;
   }}
   .p-section-title {{
-    background-color: {theme['header']}; color: #ffffff; text-align: center;
+    background-color: {theme['header']}; color: {header_fg}; text-align: center;
     font-size: {body_font_size}px; font-weight: 700; padding: 16px;
     border-radius: 12px; margin: 20px 0 14px 0;
   }}
@@ -822,13 +929,30 @@ with col_s2:
 
 col_c1, col_c2, col_c3, col_c4 = st.columns(4)
 with col_c1:
-    theme_name = st.selectbox("整體色系", list(THEMES.keys()))
+    theme_options = list(THEMES.keys()) + [CUSTOM_THEME_LABEL]
+    theme_name = st.selectbox("整體色系", theme_options)
 with col_c2:
     body_font_size = st.slider("內文字體大小 (px)", min_value=18, max_value=40, value=26)
 with col_c3:
     title_font_size = st.slider("主標題字體大小 (px)", min_value=48, max_value=130, value=66)
 with col_c4:
     notice_font_size = st.slider("公告橫幅字體大小 (px)", min_value=18, max_value=44, value=26)
+
+custom_theme = None
+if theme_name == CUSTOM_THEME_LABEL:
+    st.caption("🎨 自訂色盤：可自由挑選背景、標題列與重點色，系統會自動搭配卡片邊框與文字反差。")
+    cp1, cp2, cp3, cp4, cp5 = st.columns(5)
+    with cp1:
+        c_bg = st.color_picker("海報背景色", "#fce7f3", key="cp_bg")
+    with cp2:
+        c_header = st.color_picker("卡片標題列色", "#ec4899", key="cp_header")
+    with cp3:
+        c_accent = st.color_picker("徽章與左側標籤色", "#facc15", key="cp_accent")
+    with cp4:
+        c_title = st.color_picker("主標題文字色", "#831843", key="cp_title")
+    with cp5:
+        c_sub = st.color_picker("副標題與喇叭色", "#be185d", key="cp_sub")
+    custom_theme = build_custom_theme(c_bg, c_header, c_accent, c_title, c_sub)
 
 badge_file = st.file_uploader(
     "頂部圖示 / 隊徽 (選填，未上傳則使用預設羽球圖示)",
@@ -931,7 +1055,7 @@ kwargs_gen = dict(
     extra_days=extra_days_payload,
     notice_text=notice_text, notice_font_size=notice_font_size,
     badge_data_uri=badge_data_uri,
-    body_font_size=body_font_size, theme_name=theme_name,
+    body_font_size=body_font_size, theme_name=theme_name, custom_theme=custom_theme,
     title_font_size=title_font_size, mode="整體流程表"
 )
 
@@ -943,7 +1067,7 @@ kwargs_per = dict(
     date2_title="", data2_text="",
     notice_text=notice_text, notice_font_size=notice_font_size,
     badge_data_uri=badge_data_uri,
-    body_font_size=body_font_size, theme_name=theme_name,
+    body_font_size=body_font_size, theme_name=theme_name, custom_theme=custom_theme,
     title_font_size=title_font_size, mode="選手個人賽程"
 )
 
