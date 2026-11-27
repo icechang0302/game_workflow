@@ -296,6 +296,52 @@ THEMES = {
         notice_bg="#ffffff", notice_border="#e879f9", notice_fg="#4a044e", notice_icon="#c026d3",
         tag_m_bg="#dbeafe", tag_m_fg="#1e40af", tag_f_bg="#fae8ff", tag_f_fg="#a21caf",
     ),
+    # --- 參考賽事海報經典配色 ---
+    "主場狂龍暗紅 (經典配色)": dict(
+        bg="#240709", header="#8b1020", male="#1d4f9f", sub="#fca5a5",
+        title="#ffffff", badge="#fbbf24", date_accent="#fde047",
+        tag_l_bg="#fbbf24", tag_l_fg="#240709",
+        tag_r_bg="#ffffff", tag_r_fg="#450a0a", tag_r_border="transparent",
+        card_border="transparent",
+        notice_bg="#fff5f5", notice_border="#fbbf24", notice_fg="#450a0a", notice_icon="#b91c1c",
+        tag_m_bg="#dbeafe", tag_m_fg="#1e40af", tag_f_bg="#ffe4e6", tag_f_fg="#be1e4a",
+    ),
+    "悍將冰藍海藍 (經典配色)": dict(
+        bg="#043970", header="#0c5da5", male="#0369a1", sub="#38bdf8",
+        title="#ffffff", badge="#38bdf8", date_accent="#38bdf8",
+        tag_l_bg="#38bdf8", tag_l_fg="#042f5c",
+        tag_r_bg="#ffffff", tag_r_fg="#043970", tag_r_border="transparent",
+        card_border="transparent",
+        notice_bg="#f0f9ff", notice_border="#38bdf8", notice_fg="#0c4a6e", notice_icon="#0284c7",
+        tag_m_bg="#e0f2fe", tag_m_fg="#0369a1", tag_f_bg="#ffe4e6", tag_f_fg="#be1e4a",
+    ),
+    "勇士電光天藍 (經典配色)": dict(
+        bg="#072b4f", header="#0088ce", male="#0284c7", sub="#7dd3fc",
+        title="#ffffff", badge="#38bdf8", date_accent="#7dd3fc",
+        tag_l_bg="#0088ce", tag_l_fg="#ffffff",
+        tag_r_bg="#e0f2fe", tag_r_fg="#072b4f", tag_r_border="transparent",
+        card_border="transparent",
+        notice_bg="#ffffff", notice_border="#38bdf8", notice_fg="#072b4f", notice_icon="#0088ce",
+        tag_m_bg="#e0f2fe", tag_m_fg="#0369a1", tag_f_bg="#ffe4e6", tag_f_fg="#be1e4a",
+    ),
+    "12強藍紅榮耀 (經典配色)": dict(
+        bg="#0a1b47", header="#1a4a8a", male="#1d4ed8", sub="#cbd5e1",
+        title="#ffffff", badge="#ef4444", date_accent="#f87171",
+        tag_l_bg="#b91c1c", tag_l_fg="#ffffff",
+        tag_r_bg="#ffffff", tag_r_fg="#0a1b47", tag_r_border="transparent",
+        card_border="transparent",
+        notice_bg="#ffffff", notice_border="#cbd5e1", notice_fg="#0a1b47", notice_icon="#dc2626",
+        tag_m_bg="#dbeafe", tag_m_fg="#1e40af", tag_f_bg="#ffe4e6", tag_f_fg="#be1e4a",
+    ),
+    "經典賽墨綠沙金 (經典配色)": dict(
+        bg="#0b2e2a", header="#0d7a5f", male="#0d7a5f", sub="#e8dfd3",
+        title="#ffffff", badge="#f5b800", date_accent="#f5b800",
+        tag_l_bg="#f5b800", tag_l_fg="#0b2e2a",
+        tag_r_bg="#e8dfd3", tag_r_fg="#0b2e2a", tag_r_border="transparent",
+        card_border="transparent",
+        notice_bg="#f5efe6", notice_border="#f5b800", notice_fg="#0b2e2a", notice_icon="#e10a5a",
+        tag_m_bg="#d1fae5", tag_m_fg="#065f46", tag_f_bg="#fce7f3", tag_f_fg="#be185d",
+    ),
 }
 
 CUSTOM_THEME_LABEL = "🎨 自訂色系 (自行選色)"
