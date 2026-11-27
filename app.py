@@ -77,6 +77,97 @@ THEMES = {
         notice_bg="#f0fdfa", notice_border="#5eead4", notice_fg="#134e4a", notice_icon="#0f766e",
         tag_m_bg="#ccfbf1", tag_m_fg="#115e59", tag_f_bg="#ffe4e6", tag_f_fg="#be1e4a",
     ),
+    # --- 更多與藍色體系同風格深色系 ---
+    "寶石藍體系": dict(
+        bg="#0f295c", header="#1d4ed8", male="#1e40af", sub="#bfdbfe",
+        title="#ffffff", badge=ACCENT_YELLOW, date_accent=ACCENT_YELLOW,
+        tag_l_bg=ACCENT_YELLOW, tag_l_fg="#1f1a05",
+        tag_r_bg="#ffffff", tag_r_fg="#1e3a8a", tag_r_border="transparent",
+        card_border="transparent",
+        notice_bg="#eff6ff", notice_border="#f0c030", notice_fg="#1e293b", notice_icon="#d93829",
+        tag_m_bg="#dbeafe", tag_m_fg="#1e40af", tag_f_bg="#ffe4e6", tag_f_fg="#be1e4a",
+    ),
+    "靛紫藍體系": dict(
+        bg="#1e1b4b", header="#4338ca", male="#3730a3", sub="#c7d2fe",
+        title="#ffffff", badge=ACCENT_YELLOW, date_accent=ACCENT_YELLOW,
+        tag_l_bg=ACCENT_YELLOW, tag_l_fg="#1f1a05",
+        tag_r_bg="#ffffff", tag_r_fg="#312e81", tag_r_border="transparent",
+        card_border="transparent",
+        notice_bg="#eef2ff", notice_border="#f0c030", notice_fg="#1e1b4b", notice_icon="#dc2626",
+        tag_m_bg="#e0e7ff", tag_m_fg="#3730a3", tag_f_bg="#ffe4e6", tag_f_fg="#be1e4a",
+    ),
+    "湖水藍體系": dict(
+        bg="#082f49", header="#0369a1", male="#0284c7", sub="#bae6fd",
+        title="#ffffff", badge=ACCENT_YELLOW, date_accent=ACCENT_YELLOW,
+        tag_l_bg=ACCENT_YELLOW, tag_l_fg="#1f1a05",
+        tag_r_bg="#ffffff", tag_r_fg="#0c4a6e", tag_r_border="transparent",
+        card_border="transparent",
+        notice_bg="#f0f9ff", notice_border="#f0c030", notice_fg="#0c4a6e", notice_icon="#ea580c",
+        tag_m_bg="#e0f2fe", tag_m_fg="#0369a1", tag_f_bg="#ffe4e6", tag_f_fg="#be1e4a",
+    ),
+    "深紅體系": dict(
+        bg="#450a18", header="#9f1239", male="#1d4f9f", sub="#fecdd3",
+        title="#ffffff", badge=ACCENT_YELLOW, date_accent=ACCENT_YELLOW,
+        tag_l_bg=ACCENT_YELLOW, tag_l_fg="#1f1a05",
+        tag_r_bg="#ffffff", tag_r_fg="#4c0519", tag_r_border="transparent",
+        card_border="transparent",
+        notice_bg="#fff1f2", notice_border="#f0c030", notice_fg="#4c0519", notice_icon="#e11d48",
+        tag_m_bg="#dbeafe", tag_m_fg="#1e40af", tag_f_bg="#ffe4e6", tag_f_fg="#be1e4a",
+    ),
+    "酒紅體系": dict(
+        bg="#3b0722", header="#831843", male="#1d4f9f", sub="#fbcfe8",
+        title="#ffffff", badge=ACCENT_YELLOW, date_accent=ACCENT_YELLOW,
+        tag_l_bg=ACCENT_YELLOW, tag_l_fg="#1f1a05",
+        tag_r_bg="#ffffff", tag_r_fg="#500724", tag_r_border="transparent",
+        card_border="transparent",
+        notice_bg="#fdf2f8", notice_border="#f0c030", notice_fg="#500724", notice_icon="#be185d",
+        tag_m_bg="#dbeafe", tag_m_fg="#1e40af", tag_f_bg="#ffe4e6", tag_f_fg="#be1e4a",
+    ),
+    "深橘體系": dict(
+        bg="#431407", header="#c2410c", male="#9a3412", sub="#fed7aa",
+        title="#ffffff", badge=ACCENT_YELLOW, date_accent=ACCENT_YELLOW,
+        tag_l_bg=ACCENT_YELLOW, tag_l_fg="#1f1a05",
+        tag_r_bg="#ffffff", tag_r_fg="#431407", tag_r_border="transparent",
+        card_border="transparent",
+        notice_bg="#fff7ed", notice_border="#f0c030", notice_fg="#431407", notice_icon="#ea580c",
+        tag_m_bg="#ffedd5", tag_m_fg="#9a3412", tag_f_bg="#ffe4e6", tag_f_fg="#be1e4a",
+    ),
+    "琥珀金體系": dict(
+        bg="#3d2606", header="#b45309", male="#92400e", sub="#fde68a",
+        title="#ffffff", badge=ACCENT_YELLOW, date_accent=ACCENT_YELLOW,
+        tag_l_bg=ACCENT_YELLOW, tag_l_fg="#1f1a05",
+        tag_r_bg="#ffffff", tag_r_fg="#451a03", tag_r_border="transparent",
+        card_border="transparent",
+        notice_bg="#fefce8", notice_border="#f0c030", notice_fg="#451a03", notice_icon="#d97706",
+        tag_m_bg="#fef3c7", tag_m_fg="#92400e", tag_f_bg="#ffe4e6", tag_f_fg="#be1e4a",
+    ),
+    "咖啡體系": dict(
+        bg="#291a12", header="#6b4423", male="#78350f", sub="#e7d3c3",
+        title="#ffffff", badge=ACCENT_YELLOW, date_accent=ACCENT_YELLOW,
+        tag_l_bg=ACCENT_YELLOW, tag_l_fg="#1f1a05",
+        tag_r_bg="#ffffff", tag_r_fg="#291a12", tag_r_border="transparent",
+        card_border="transparent",
+        notice_bg="#faf5f0", notice_border="#f0c030", notice_fg="#291a12", notice_icon="#b45309",
+        tag_m_bg="#f5ebe0", tag_m_fg="#6b4423", tag_f_bg="#ffe4e6", tag_f_fg="#be1e4a",
+    ),
+    "橄欖綠體系": dict(
+        bg="#1f2e12", header="#4d7c0f", male="#3f6212", sub="#d9f99d",
+        title="#ffffff", badge=ACCENT_YELLOW, date_accent=ACCENT_YELLOW,
+        tag_l_bg=ACCENT_YELLOW, tag_l_fg="#1f1a05",
+        tag_r_bg="#ffffff", tag_r_fg="#1a2e05", tag_r_border="transparent",
+        card_border="transparent",
+        notice_bg="#f7fee7", notice_border="#f0c030", notice_fg="#1a2e05", notice_icon="#4d7c0f",
+        tag_m_bg="#ecfccb", tag_m_fg="#3f6212", tag_f_bg="#ffe4e6", tag_f_fg="#be1e4a",
+    ),
+    "玫瑰桃紅體系": dict(
+        bg="#4a0e36", header="#be185d", male="#1d4f9f", sub="#fbcfe8",
+        title="#ffffff", badge=ACCENT_YELLOW, date_accent=ACCENT_YELLOW,
+        tag_l_bg=ACCENT_YELLOW, tag_l_fg="#1f1a05",
+        tag_r_bg="#ffffff", tag_r_fg="#500724", tag_r_border="transparent",
+        card_border="transparent",
+        notice_bg="#fdf2f8", notice_border="#f0c030", notice_fg="#500724", notice_icon="#be185d",
+        tag_m_bg="#dbeafe", tag_m_fg="#1e40af", tag_f_bg="#ffe4e6", tag_f_fg="#be1e4a",
+    ),
     # --- 新增亮色系 ---
     "晴空亮藍 (亮色)": dict(
         bg="#eef6ff", header="#2563eb", male="#1d4ed8", sub="#1e40af",
@@ -173,6 +264,9 @@ def get_font_base64():
 # -----------------------------------------------------------------------------
 # Session State 初始化
 # -----------------------------------------------------------------------------
+MAX_TOTAL_DAYS = 10
+MAX_EXTRA_DAYS = MAX_TOTAL_DAYS - 2  # 主編輯區已有第 1、2 天，最多再擴充 8 天（共 10 天）
+
 if "g_date1" not in st.session_state:
     st.session_state["g_date1"] = ""
 if "g_text1" not in st.session_state:
@@ -185,10 +279,13 @@ if "g_text2" not in st.session_state:
 if "personal_text" not in st.session_state:
     st.session_state["personal_text"] = ""
 
-if "extra_date" not in st.session_state:
-    st.session_state["extra_date"] = ""
-if "extra_gen_text" not in st.session_state:
-    st.session_state["extra_gen_text"] = ""
+if "extra_days_count" not in st.session_state:
+    st.session_state["extra_days_count"] = 1
+for _idx in range(1, MAX_EXTRA_DAYS + 1):
+    if f"g_extra_date_{_idx}" not in st.session_state:
+        st.session_state[f"g_extra_date_{_idx}"] = ""
+    if f"g_extra_text_{_idx}" not in st.session_state:
+        st.session_state[f"g_extra_text_{_idx}"] = ""
 
 # -----------------------------------------------------------------------------
 # 解析整體流程表文字 → 卡片 HTML (同時間且同組別以「、」自動合併選手)
@@ -346,8 +443,8 @@ def badge_svg(bg, accent=ACCENT_YELLOW):
   <path d="M48 33 L56 30" stroke="{bg}" stroke-width="1.5"/>
 </svg>"""
 
-def notice_svg(color):
-    return f"""<svg width="34" height="34" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink: 0;">
+def notice_svg(color, size=34):
+    return f"""<svg width="{size}" height="{size}" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink: 0;">
   <g transform="rotate(-10 18 18)">
     <path d="M8 14.5L23.5 8V28L8 21.5V14.5Z" fill="{color}" stroke="{color}" stroke-width="1.8" stroke-linejoin="round"/>
     <path d="M4.5 15.2C3.67 15.2 3 15.87 3 16.7V19.3C3 20.13 3.67 20.8 4.5 20.8H8V15.2H4.5Z" fill="{color}"/>
@@ -402,8 +499,8 @@ def uploaded_file_to_data_uri(uploaded_file):
 # -----------------------------------------------------------------------------
 def generate_poster_html(sub_title, main_title, tag_left, tag_right,
                          date1_title, data1_text, date2_title, data2_text,
-                         extra_date="", extra_text="",
-                         notice_text="", badge_data_uri="",
+                         extra_date="", extra_text="", extra_days=None,
+                         notice_text="", notice_font_size=26, badge_data_uri="",
                          body_font_size=28, theme_name="藍色體系", 
                          title_font_size=66, mode="整體流程表", preview=True):
     theme = THEMES[theme_name]
@@ -413,27 +510,31 @@ def generate_poster_html(sub_title, main_title, tag_left, tag_right,
     body_content = ""
 
     if mode == "整體流程表":
-        c1, count1 = parse_text_to_cards(data1_text)
-        title1_html = (f'<div class="section-title">{html_lib.escape(date1_title)}</div>' if date1_title.strip() else "")
-        
-        show_day2 = bool(data2_text.strip())
-        c2, count2 = parse_text_to_cards(data2_text) if show_day2 else ("", 0)
-        title2_html = (f'<div class="section-title">{html_lib.escape(date2_title)}</div>' if (show_day2 and date2_title.strip()) else "")
-        day2_html = (f'{title2_html}<div class="grid">{c2}</div>' if show_day2 else "")
-        
-        show_extra = bool(extra_text.strip())
-        cx, count_x = parse_text_to_cards(extra_text) if show_extra else ("", 0)
-        title_x_html = (f'<div class="section-title">{html_lib.escape(extra_date)}</div>' if (show_extra and extra_date.strip()) else "")
-        extra_html = (f'{title_x_html}<div class="grid">{cx}</div>' if show_extra else "")
+        days_list = [(date1_title, data1_text)]
+        if data2_text.strip():
+            days_list.append((date2_title, data2_text))
+        if extra_days:
+            for d_title, d_text in extra_days:
+                if d_text.strip():
+                    days_list.append((d_title, d_text))
+        elif extra_text.strip():
+            days_list.append((extra_date, extra_text))
+
+        sections_html = ""
+        for idx, (d_title, d_text) in enumerate(days_list):
+            if idx > 0 and not d_text.strip():
+                continue
+            cards_html, count_d = parse_text_to_cards(d_text)
+            title_d_html = f'<div class="section-title">{html_lib.escape(d_title)}</div>' if d_title.strip() else ""
+            if idx == 0 and not d_text.strip() and len(days_list) > 1:
+                continue
+            sections_html += f"{title_d_html}<div class=\"grid\">{cards_html}</div>"
+            total_metric += count_d
 
         body_content = f"""
   <div class="section-container">
-    {title1_html}
-    <div class="grid">{c1}</div>
-    {day2_html}
-    {extra_html}
+    {sections_html}
   </div>"""
-        total_metric = count1 + count2 + count_x
     else:
         body_content_html, total_metric = parse_personal_integrated_text(data1_text)
         body_content = f"""
@@ -463,8 +564,9 @@ def generate_poster_html(sub_title, main_title, tag_left, tag_right,
         tags_inner += f'<span class="tag-white">{tag_right}</span>'
         
     tags_html = f'<div class="tags">{tags_inner}</div>' if (has_tag_l or has_tag_r) else ''
+    notice_icon_size = max(24, int(notice_font_size * 1.25))
     notice_html = (
-        f'<div class="notice-banner">{notice_svg(theme["notice_icon"])}'
+        f'<div class="notice-banner">{notice_svg(theme["notice_icon"], size=notice_icon_size)}'
         f'<span class="notice-text">{notice_clean}</span></div>'
         if has_notice else ''
     )
@@ -592,7 +694,7 @@ def generate_poster_html(sub_title, main_title, tag_left, tag_right,
     gap: 14px;
   }}
   .notice-text {{
-    font-size: {body_font_size}px;
+    font-size: {notice_font_size}px;
     font-weight: 800;
     line-height: 1.4;
     text-align: left;
@@ -718,13 +820,15 @@ with col_s2:
     tag_left_gen = st.text_input("整體流程表左側標籤", value="整體流程表")
     tag_left_per = st.text_input("選手個人賽程左側標籤", value="選手個人賽程")
 
-col_c1, col_c2, col_c3 = st.columns(3)
+col_c1, col_c2, col_c3, col_c4 = st.columns(4)
 with col_c1:
     theme_name = st.selectbox("整體色系", list(THEMES.keys()))
 with col_c2:
     body_font_size = st.slider("內文字體大小 (px)", min_value=18, max_value=40, value=26)
 with col_c3:
     title_font_size = st.slider("主標題字體大小 (px)", min_value=48, max_value=130, value=66)
+with col_c4:
+    notice_font_size = st.slider("公告橫幅字體大小 (px)", min_value=18, max_value=44, value=26)
 
 badge_file = st.file_uploader(
     "頂部圖示 / 隊徽 (選填，未上傳則使用預設羽球圖示)",
@@ -760,10 +864,46 @@ with col_input2:
         placeholder=""
     )
 
-# 額外天數擴充 (僅整體流程表)
+def _add_extra_day():
+    if st.session_state["extra_days_count"] < MAX_EXTRA_DAYS:
+        st.session_state["extra_days_count"] += 1
+
+def _remove_extra_day():
+    if st.session_state["extra_days_count"] > 1:
+        idx = st.session_state["extra_days_count"]
+        st.session_state[f"g_extra_date_{idx}"] = ""
+        st.session_state[f"g_extra_text_{idx}"] = ""
+        st.session_state["extra_days_count"] -= 1
+
+# 額外天數擴充 (僅整體流程表，上限共 10 天)
 with st.expander("➕ 點此新增更多天數賽程 (整體流程表專用)"):
-    st.text_input("額外天數日期說明", key="extra_date")
-    st.text_area("額外天數賽程 (整體流程表)", key="extra_gen_text", height=120)
+    cur_extra = st.session_state["extra_days_count"]
+    total_days_now = 2 + cur_extra
+    col_btn_add, col_btn_rem, col_day_info = st.columns([1.2, 1.2, 2.6])
+    with col_btn_add:
+        st.button(
+            "➕ 新增一天" if total_days_now < MAX_TOTAL_DAYS else "已達上限 10 天",
+            on_click=_add_extra_day,
+            disabled=(total_days_now >= MAX_TOTAL_DAYS),
+            key="btn_add_day",
+            use_container_width=True,
+        )
+    with col_btn_rem:
+        st.button(
+            "➖ 移除最後一天",
+            on_click=_remove_extra_day,
+            disabled=(cur_extra <= 1),
+            key="btn_rem_day",
+            use_container_width=True,
+        )
+    with col_day_info:
+        st.caption(f"目前共有第 1 ～ {total_days_now} 天（上限 {MAX_TOTAL_DAYS} 天）")
+
+    for i in range(1, cur_extra + 1):
+        day_num = 2 + i
+        st.markdown(f"**第 {day_num} 天**")
+        st.text_input(f"第 {day_num} 天日期說明 (整體)", key=f"g_extra_date_{i}")
+        st.text_area(f"第 {day_num} 天賽程 (整體)", key=f"g_extra_text_{i}", height=120, placeholder=f"請貼上第 {day_num} 天賽程內容...")
 
 st.markdown("---")
 
@@ -772,15 +912,25 @@ st.header("🖼️ 4. 即時預覽與圖片下載 (左右兩張)")
 
 col_prev1, col_prev2 = st.columns(2)
 
+extra_days_payload = [
+    (st.session_state[f"g_extra_date_{i}"], st.session_state[f"g_extra_text_{i}"])
+    for i in range(1, st.session_state["extra_days_count"] + 1)
+]
+has_gen_content = (
+    bool(st.session_state["g_text1"].strip())
+    or bool(st.session_state["g_text2"].strip())
+    or any(t.strip() for _, t in extra_days_payload)
+)
+
 # 組裝整體流程表參數
 kwargs_gen = dict(
     sub_title=sub_title, main_title=main_title,
     tag_left=tag_left_gen, tag_right=tag_right,
     date1_title=st.session_state["g_date1"], data1_text=st.session_state["g_text1"],
     date2_title=st.session_state["g_date2"], data2_text=st.session_state["g_text2"],
-    extra_date=st.session_state["extra_date"] if st.session_state["extra_date"].strip() else "",
-    extra_text=st.session_state["extra_gen_text"] if st.session_state["extra_date"].strip() else "",
-    notice_text=notice_text, badge_data_uri=badge_data_uri,
+    extra_days=extra_days_payload,
+    notice_text=notice_text, notice_font_size=notice_font_size,
+    badge_data_uri=badge_data_uri,
     body_font_size=body_font_size, theme_name=theme_name,
     title_font_size=title_font_size, mode="整體流程表"
 )
@@ -791,16 +941,17 @@ kwargs_per = dict(
     tag_left=tag_left_per, tag_right=tag_right,
     date1_title="", data1_text=st.session_state["personal_text"],
     date2_title="", data2_text="",
-    notice_text=notice_text, badge_data_uri=badge_data_uri,
+    notice_text=notice_text, notice_font_size=notice_font_size,
+    badge_data_uri=badge_data_uri,
     body_font_size=body_font_size, theme_name=theme_name,
     title_font_size=title_font_size, mode="選手個人賽程"
 )
 
-notice_extra_px = 70 if notice_text.strip() else 0
+notice_extra_px = (notice_font_size + 44) if notice_text.strip() else 0
 
 with col_prev1:
     st.subheader("🌐 【整體流程表】預覽")
-    if st.session_state["g_text1"].strip() or st.session_state["g_text2"].strip():
+    if has_gen_content:
         html_g_prev, metric_g = generate_poster_html(preview=True, **kwargs_gen)
         preview_height_g = int(350 + notice_extra_px + metric_g * 65)
         st.components.v1.html(html_g_prev, height=preview_height_g, scrolling=False)
