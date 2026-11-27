@@ -916,14 +916,13 @@ def generate_poster_html(sub_title, main_title, tag_left, tag_right,
 
     if badge_data_uri:
         badge_inner = f'<img src="{badge_data_uri}" alt="badge" class="badge-img" />'
-        badge_html = f'<div class="badge-icon">{badge_inner}</div>'
     elif bg_image_choice == BG_OPT_RACKET_ICON:
         badge_inner = badge_svg(bg_color, theme["badge"])
-        badge_html = f'<div class="badge-icon">{badge_inner}</div>'
     else:
-        badge_html = ""
+        badge_inner = '<span class="badge-spacer" aria-hidden="true"></span>'
 
-    has_header_content = bool(badge_html or has_sub or has_main or has_tag_l or has_tag_r or has_notice)
+    has_header_content = bool(badge_data_uri or bg_image_choice == BG_OPT_RACKET_ICON or has_sub or has_main or has_tag_l or has_tag_r or has_notice)
+    badge_html = f'<div class="badge-icon">{badge_inner}</div>' if has_header_content else ""
 
     header_content = ""
     if has_header_content:
