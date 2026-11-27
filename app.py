@@ -20,7 +20,26 @@ BOTTOM_PAD = 120          # 海報底部留白 (px)
 FEMALE_COLOR = "#be1e4a"  # 女子組別文字色
 ACCENT_YELLOW = "#f0c030" # 黃色標籤與圖示
 
-# 色系設定（含原有深色系與新增亮色系）
+
+def _load_arena_bg_data_uri():
+    """載入羽球場底圖並轉為內嵌 data URI。"""
+    candidate_paths = [
+        "arena_bg.jpg",
+        "arena_bg.png",
+        "",
+    ]
+    for p in candidate_paths:
+        if os.path.exists(p):
+            with open(p, "rb") as f:
+                raw = f.read()
+            mime = "image/jpeg" if p.lower().endswith((".jpg", ".jpeg")) else "image/png"
+            return f"data:{mime};base64,{base64.b64encode(raw).decode()}"
+    return ""
+
+
+ARENA_BG_DATA_URI = _load_arena_bg_data_uri()
+
+# 色系設定（含原有深色系、新增亮色系與羽球場底圖選項）
 THEMES = {
     # --- 原有深色系 ---
     "藍色體系": dict(
@@ -258,7 +277,7 @@ THEMES = {
         tag_r_bg="#ffffff", tag_r_fg="#9d174d", tag_r_border="#f9a8d4",
         card_border="#fbcfe8",
         notice_bg="#ffffff", notice_border="#f472b6", notice_fg="#831843", notice_icon="#ec4899",
-        tag_m_bg="#dbeafe", tag_m_fg="#1e40af", tag_f_bg="#fce7f3", tag_f_fg="#be185d",
+        tag_m_bg="#dbeafe", tag_m_fg="#1e40af", tag_f_bg="#fce7f3", tag_f_fg="#be1e4a",
     ),
     "草莓牛奶 (亮色)": dict(
         bg="#fce7f3", header="#db2777", male="#1d4ed8", sub="#9d174d",
@@ -296,7 +315,19 @@ THEMES = {
         notice_bg="#ffffff", notice_border="#e879f9", notice_fg="#4a044e", notice_icon="#c026d3",
         tag_m_bg="#dbeafe", tag_m_fg="#1e40af", tag_f_bg="#fae8ff", tag_f_fg="#a21caf",
     ),
-    # --- 參考賽事海報經典配色 ---
+    # --- 參考賽事海報經典配色與羽球場底圖 ---
+    "主場狂龍暗紅 (羽球場底圖)": dict(
+        bg="#240709",
+        bg_gradient="linear-gradient(180deg, rgba(36, 7, 9, 0.55) 0%, rgba(36, 7, 9, 0.72) 55%, rgba(21, 3, 5, 0.88) 100%)",
+        bg_image_url=ARENA_BG_DATA_URI,
+        header="#8b1020", male="#1d4f9f", sub="#fca5a5",
+        title="#ffffff", badge="#fbbf24", date_accent="#fde047",
+        tag_l_bg="#fbbf24", tag_l_fg="#240709",
+        tag_r_bg="#ffffff", tag_r_fg="#450a0a", tag_r_border="transparent",
+        card_border="transparent",
+        notice_bg="#fff5f5", notice_border="#fbbf24", notice_fg="#450a0a", notice_icon="#b91c1c",
+        tag_m_bg="#dbeafe", tag_m_fg="#1e40af", tag_f_bg="#ffe4e6", tag_f_fg="#be1e4a",
+    ),
     "主場狂龍暗紅 (經典配色)": dict(
         bg="#240709", bg_gradient="linear-gradient(160deg, #5c0c15 0%, #2b070b 48%, #150305 100%)",
         header="#8b1020", male="#1d4f9f", sub="#fca5a5",
@@ -381,19 +412,29 @@ def _mix_hex(hex1, hex2, ratio):
     b = int(b1 * (1 - ratio) + b2 * ratio)
     return f"#{r:02x}{g:02x}{b:02x}"
 
-def get_theme_gradient(theme):
-    """取得色系背景漸層；未指定時依主色與標題色自動產生自然漸層。"""
-    if theme.get("bg_gradient"):
-        return theme["bg_gradient"]
-    bg = theme["bg"]
-    header = theme["header"]
-    if _is_light_color(bg):
-        top = _mix_hex(bg, "#ffffff", 0.55)
-        bottom = _mix_hex(bg, header, 0.14)
-    else:
-        top = _mix_hex(bg, header, 0.24)
-        bottom = _mix_hex(bg, "#000000", 0.34)
-    return f"linear-gradient(160deg, {top} 0%, {bg} 48%, {bottom} 100%)"
+def get_theme_background_css(theme):
+    """取得海報背景 CSS；支援純漸層或底圖搭配遮罩漸層。"""
+    grad = theme.get("bg_gradient")
+    if not grad:
+        bg = theme["bg"]
+        header = theme["header"]
+        if _is_light_color(bg):
+            top = _mix_hex(bg, "#ffffff", 0.55)
+            bottom = _mix_hex(bg, header, 0.14)
+        else:
+            top = _mix_hex(bg, header, 0.24)
+            bottom = _mix_hex(bg, "#000000", 0.34)
+        grad = f"linear-gradient(160deg, {top} 0%, {bg} 48%, {bottom} 100%)"
+
+    bg_img_uri = theme.get("bg_image_url", "")
+    if bg_img_uri:
+        return (
+            f"background-image: {grad}, url('{bg_img_uri}'); "
+            f"background-size: 100% 100%, {POSTER_WIDTH}px auto; "
+            f"background-position: center top, center top; "
+            f"background-repeat: no-repeat, no-repeat;"
+        )
+    return f"background-image: {grad};"
 
 def build_custom_theme(bg, bg2, header, accent, title_color, sub_and_icon_color):
     """依使用者自選顏色組裝漸層色系，並自動計算反差與卡片邊框。"""
@@ -733,9 +774,9 @@ def generate_poster_html(sub_title, main_title, tag_left, tag_right,
                          title_font_size=66, mode="整體流程表", preview=True):
     theme = custom_theme if custom_theme is not None else THEMES[theme_name]
     bg_color = theme["bg"]
-    bg_gradient = get_theme_gradient(theme)
+    bg_css = get_theme_background_css(theme)
     header_fg = theme.get("header_fg", "#ffffff")
-    # 輸出 PNG 時 body 使用不重複的純色作為裁切基準，讓漸層海報依實際內容高度精準裁切
+    # 輸出 PNG 時 body 使用不重複的純色作為裁切基準，讓海報依實際內容高度精準裁切
     r_bg, g_bg, b_bg = _hex_to_rgb(bg_color)
     sentinel_bg = "#fe01fe" if g_bg > 180 and r_bg < 80 else "#01fe01"
     body_bg = bg_color if preview else sentinel_bg
@@ -886,7 +927,7 @@ def generate_poster_html(sub_title, main_title, tag_left, tag_right,
   }}
   #poster {{
     background-color: {bg_color};
-    background-image: {bg_gradient};
+    {bg_css}
     font-family: 'Noto Sans TC', 'Microsoft JhengHei', 'PingFang TC', sans-serif;
     color: {theme['title']};
     width: {POSTER_WIDTH}px;
@@ -1054,15 +1095,22 @@ col_s1, col_s2 = st.columns(2)
 with col_s1:
     main_title = st.text_input("主標題 (選填)", value="MAUC 秋季賽")
     sub_title = st.text_input("副標題 / 隊伍名稱 (選填)", value="2026年牧羽盃全國四季聯賽")
+with col_s2:
+    tag_right = st.text_input("右側標籤 / 日期 (選填)", value="日期：2026/09/28（一）")
+    col_tag_l, col_tag_r = st.columns(2)
+    with col_tag_l:
+        tag_left_gen = st.text_input("整體流程表左側標籤", value="整體流程表")
+    with col_tag_r:
+        tag_left_per = st.text_input("選手個人賽程左側標籤", value="選手個人賽程")
+
+col_n1, col_n2 = st.columns([2.5, 1.5])
+with col_n1:
     notice_text = st.text_input(
-        "公告 / 注意事項橫幅 (選填，字體與主標題一致)",
+        "公告 / 注意事項橫幅",
         value="",
         placeholder="例如：此賽事需要全隊低中高年級團進團出，再請留意！",
     )
-with col_s2:
-    tag_right = st.text_input("右側標籤 / 日期 (選填)", value="日期：2026/09/28（一）")
-    tag_left_gen = st.text_input("整體流程表左側標籤", value="整體流程表")
-    tag_left_per = st.text_input("選手個人賽程左側標籤", value="選手個人賽程")
+with col_n2:
     notice_symbol = st.selectbox(
         "公告橫幅前方符號",
         NOTICE_SYMBOL_OPTIONS,
