@@ -1,4 +1,5 @@
 import os
+import io
 import math
 import base64
 import html as html_lib
@@ -19,14 +20,136 @@ BOTTOM_PAD = 120         # 海報底部留白 (px)
 FEMALE_COLOR = "#be1e4a" # 女子組別文字色
 ACCENT_YELLOW = "#f0c030"  # 黃色標籤與圖示
 
-# 色系設定
+# 色系設定（含原有深色系與新增亮色系）
 THEMES = {
-    "藍色體系": dict(bg="#13214b", header="#23407c", male="#1d4f9f", sub="#c3cdf2", tag_m_bg="#dbeafe", tag_m_fg="#1e40af", tag_f_bg="#ffe4e6", tag_f_fg="#be1e4a"),
-    "綠色體系": dict(bg="#0b3d2e", header="#1f6f50", male="#1b7a4f", sub="#b7e4cf", tag_m_bg="#d1fae5", tag_m_fg="#065f46", tag_f_bg="#ffe4e6", tag_f_fg="#be1e4a"),
-    "灰色體系": dict(bg="#1f2937", header="#4b5563", male="#374151", sub="#d1d5db", tag_m_bg="#f3f4f6", tag_m_fg="#374151", tag_f_bg="#ffe4e6", tag_f_fg="#be1e4a"),
-    "墨黑體系": dict(bg="#111111", header="#3a3a3a", male="#3f3f46", sub="#d4d4d8", tag_m_bg="#f4f4f5", tag_m_fg="#27272a", tag_f_bg="#ffe4e6", tag_f_fg="#be1e4a"),
-    "紫色體系": dict(bg="#2a1a5e", header="#5b3fa5", male="#5b3fa5", sub="#d8ccf5", tag_m_bg="#ede9fe", tag_m_fg="#5b21b6", tag_f_bg="#ffe4e6", tag_f_fg="#be1e4a"),
-    "青藍綠體系": dict(bg="#0c3b45", header="#1f6f7d", male="#1a6b7a", sub="#bde3ea", tag_m_bg="#ccfbf1", tag_m_fg="#115e59", tag_f_bg="#ffe4e6", tag_f_fg="#be1e4a"),
+    # --- 原有深色系 ---
+    "藍色體系": dict(
+        bg="#13214b", header="#23407c", male="#1d4f9f", sub="#c3cdf2",
+        title="#ffffff", badge=ACCENT_YELLOW, date_accent=ACCENT_YELLOW,
+        tag_l_bg=ACCENT_YELLOW, tag_l_fg="#1f1a05",
+        tag_r_bg="#ffffff", tag_r_fg="#1f2937", tag_r_border="transparent",
+        card_border="transparent",
+        notice_bg="#fef7e6", notice_border="#f0c030", notice_fg="#1e293b", notice_icon="#d93829",
+        tag_m_bg="#dbeafe", tag_m_fg="#1e40af", tag_f_bg="#ffe4e6", tag_f_fg="#be1e4a",
+    ),
+    "綠色體系": dict(
+        bg="#0b3d2e", header="#1f6f50", male="#1b7a4f", sub="#b7e4cf",
+        title="#ffffff", badge=ACCENT_YELLOW, date_accent=ACCENT_YELLOW,
+        tag_l_bg=ACCENT_YELLOW, tag_l_fg="#1f1a05",
+        tag_r_bg="#ffffff", tag_r_fg="#1f2937", tag_r_border="transparent",
+        card_border="transparent",
+        notice_bg="#fefce8", notice_border="#f0c030", notice_fg="#14532d", notice_icon="#d97706",
+        tag_m_bg="#d1fae5", tag_m_fg="#065f46", tag_f_bg="#ffe4e6", tag_f_fg="#be1e4a",
+    ),
+    "灰色體系": dict(
+        bg="#1f2937", header="#4b5563", male="#374151", sub="#d1d5db",
+        title="#ffffff", badge=ACCENT_YELLOW, date_accent=ACCENT_YELLOW,
+        tag_l_bg=ACCENT_YELLOW, tag_l_fg="#1f1a05",
+        tag_r_bg="#ffffff", tag_r_fg="#1f2937", tag_r_border="transparent",
+        card_border="transparent",
+        notice_bg="#f8fafc", notice_border="#cbd5e1", notice_fg="#1f2937", notice_icon="#e11d48",
+        tag_m_bg="#f3f4f6", tag_m_fg="#374151", tag_f_bg="#ffe4e6", tag_f_fg="#be1e4a",
+    ),
+    "墨黑體系": dict(
+        bg="#111111", header="#3a3a3a", male="#3f3f46", sub="#d4d4d8",
+        title="#ffffff", badge=ACCENT_YELLOW, date_accent=ACCENT_YELLOW,
+        tag_l_bg=ACCENT_YELLOW, tag_l_fg="#1f1a05",
+        tag_r_bg="#ffffff", tag_r_fg="#1f2937", tag_r_border="transparent",
+        card_border="transparent",
+        notice_bg="#fef7e6", notice_border="#f0c030", notice_fg="#18181b", notice_icon="#dc2626",
+        tag_m_bg="#f4f4f5", tag_m_fg="#27272a", tag_f_bg="#ffe4e6", tag_f_fg="#be1e4a",
+    ),
+    "紫色體系": dict(
+        bg="#2a1a5e", header="#5b3fa5", male="#5b3fa5", sub="#d8ccf5",
+        title="#ffffff", badge=ACCENT_YELLOW, date_accent=ACCENT_YELLOW,
+        tag_l_bg=ACCENT_YELLOW, tag_l_fg="#1f1a05",
+        tag_r_bg="#ffffff", tag_r_fg="#1f2937", tag_r_border="transparent",
+        card_border="transparent",
+        notice_bg="#faf5ff", notice_border="#d8b4fe", notice_fg="#3b0764", notice_icon="#7c3aed",
+        tag_m_bg="#ede9fe", tag_m_fg="#5b21b6", tag_f_bg="#ffe4e6", tag_f_fg="#be1e4a",
+    ),
+    "青藍綠體系": dict(
+        bg="#0c3b45", header="#1f6f7d", male="#1a6b7a", sub="#bde3ea",
+        title="#ffffff", badge=ACCENT_YELLOW, date_accent=ACCENT_YELLOW,
+        tag_l_bg=ACCENT_YELLOW, tag_l_fg="#1f1a05",
+        tag_r_bg="#ffffff", tag_r_fg="#1f2937", tag_r_border="transparent",
+        card_border="transparent",
+        notice_bg="#f0fdfa", notice_border="#5eead4", notice_fg="#134e4a", notice_icon="#0f766e",
+        tag_m_bg="#ccfbf1", tag_m_fg="#115e59", tag_f_bg="#ffe4e6", tag_f_fg="#be1e4a",
+    ),
+    # --- 新增亮色系 ---
+    "晴空亮藍 (亮色)": dict(
+        bg="#eef6ff", header="#2563eb", male="#1d4ed8", sub="#1e40af",
+        title="#0f172a", badge="#2563eb", date_accent="#1d4ed8",
+        tag_l_bg="#facc15", tag_l_fg="#1e293b",
+        tag_r_bg="#ffffff", tag_r_fg="#1e3a8a", tag_r_border="#93c5fd",
+        card_border="#bfdbfe",
+        notice_bg="#ffffff", notice_border="#60a5fa", notice_fg="#1e3a8a", notice_icon="#2563eb",
+        tag_m_bg="#dbeafe", tag_m_fg="#1e40af", tag_f_bg="#ffe4e6", tag_f_fg="#be1e4a",
+    ),
+    "清新薄荷 (亮色)": dict(
+        bg="#ecfdf5", header="#059669", male="#047857", sub="#065f46",
+        title="#064e3b", badge="#059669", date_accent="#047857",
+        tag_l_bg="#fbbf24", tag_l_fg="#1f2937",
+        tag_r_bg="#ffffff", tag_r_fg="#065f46", tag_r_border="#6ee7b7",
+        card_border="#a7f3d0",
+        notice_bg="#ffffff", notice_border="#34d399", notice_fg="#064e3b", notice_icon="#059669",
+        tag_m_bg="#d1fae5", tag_m_fg="#065f46", tag_f_bg="#ffe4e6", tag_f_fg="#be1e4a",
+    ),
+    "陽光暖橘 (亮色)": dict(
+        bg="#fff7ed", header="#ea580c", male="#c2410c", sub="#9a3412",
+        title="#431407", badge="#ea580c", date_accent="#c2410c",
+        tag_l_bg="#fbbf24", tag_l_fg="#431407",
+        tag_r_bg="#ffffff", tag_r_fg="#9a3412", tag_r_border="#fdba74",
+        card_border="#fed7aa",
+        notice_bg="#ffffff", notice_border="#fb923c", notice_fg="#7c2d12", notice_icon="#ea580c",
+        tag_m_bg="#ffedd5", tag_m_fg="#9a3412", tag_f_bg="#ffe4e6", tag_f_fg="#be1e4a",
+    ),
+    "晨曦金黃 (亮色)": dict(
+        bg="#fefce8", header="#d97706", male="#b45309", sub="#92400e",
+        title="#451a03", badge="#d97706", date_accent="#b45309",
+        tag_l_bg="#fde047", tag_l_fg="#451a03",
+        tag_r_bg="#ffffff", tag_r_fg="#78350f", tag_r_border="#fcd34d",
+        card_border="#fde68a",
+        notice_bg="#ffffff", notice_border="#fbbf24", notice_fg="#78350f", notice_icon="#d97706",
+        tag_m_bg="#fef3c7", tag_m_fg="#92400e", tag_f_bg="#ffe4e6", tag_f_fg="#be1e4a",
+    ),
+    "櫻花粉紅 (亮色)": dict(
+        bg="#fff1f2", header="#e11d48", male="#0369a1", sub="#9f1239",
+        title="#4c0519", badge="#e11d48", date_accent="#be123c",
+        tag_l_bg="#fbbf24", tag_l_fg="#4c0519",
+        tag_r_bg="#ffffff", tag_r_fg="#9f1239", tag_r_border="#fda4af",
+        card_border="#fecdd3",
+        notice_bg="#ffffff", notice_border="#fb7185", notice_fg="#881337", notice_icon="#e11d48",
+        tag_m_bg="#e0f2fe", tag_m_fg="#0369a1", tag_f_bg="#ffe4e6", tag_f_fg="#be1e4a",
+    ),
+    "薰衣草紫 (亮色)": dict(
+        bg="#f5f3ff", header="#7c3aed", male="#5b21b6", sub="#5b21b6",
+        title="#2e1065", badge="#7c3aed", date_accent="#6d28d9",
+        tag_l_bg="#facc15", tag_l_fg="#2e1065",
+        tag_r_bg="#ffffff", tag_r_fg="#5b21b6", tag_r_border="#c4b5fd",
+        card_border="#ddd6fe",
+        notice_bg="#ffffff", notice_border="#a78bfa", notice_fg="#4c1d95", notice_icon="#7c3aed",
+        tag_m_bg="#ede9fe", tag_m_fg="#5b21b6", tag_f_bg="#ffe4e6", tag_f_fg="#be1e4a",
+    ),
+    "湖水亮青 (亮色)": dict(
+        bg="#ecfeff", header="#0891b2", male="#0e7490", sub="#155e75",
+        title="#083344", badge="#0891b2", date_accent="#0e7490",
+        tag_l_bg="#facc15", tag_l_fg="#083344",
+        tag_r_bg="#ffffff", tag_r_fg="#155e75", tag_r_border="#67e8f9",
+        card_border="#a5f3fc",
+        notice_bg="#ffffff", notice_border="#22d3ee", notice_fg="#164e63", notice_icon="#0891b2",
+        tag_m_bg="#cffafe", tag_m_fg="#155e75", tag_f_bg="#ffe4e6", tag_f_fg="#be1e4a",
+    ),
+    "極簡亮白 (亮色)": dict(
+        bg="#f8fafc", header="#334155", male="#1e40af", sub="#475569",
+        title="#0f172a", badge="#334155", date_accent="#1e293b",
+        tag_l_bg="#facc15", tag_l_fg="#0f172a",
+        tag_r_bg="#ffffff", tag_r_fg="#334155", tag_r_border="#cbd5e1",
+        card_border="#cbd5e1",
+        notice_bg="#f1f5f9", notice_border="#94a3b8", notice_fg="#0f172a", notice_icon="#e11d48",
+        tag_m_bg="#e2e8f0", tag_m_fg="#1e293b", tag_f_bg="#ffe4e6", tag_f_fg="#be1e4a",
+    ),
 }
 
 # -----------------------------------------------------------------------------
@@ -209,19 +332,70 @@ def parse_personal_integrated_text(text):
     return full_html, max(1, total_metric)
 
 # -----------------------------------------------------------------------------
-# 羽球拍與羽球組合專屬圖示 (黃色)
+# 羽球拍與羽球組合專屬圖示 (預設圖示) 與 公告喇叭圖示
 # -----------------------------------------------------------------------------
-def badge_svg(bg):
+def badge_svg(bg, accent=ACCENT_YELLOW):
     return f"""<svg width="68" height="76" viewBox="0 0 68 76" xmlns="http://www.w3.org/2000/svg">
-  <ellipse cx="24" cy="26" rx="15" ry="19" fill="none" stroke="{ACCENT_YELLOW}" stroke-width="3.5"/>
+  <ellipse cx="24" cy="26" rx="15" ry="19" fill="none" stroke="{accent}" stroke-width="3.5"/>
   <path d="M17 14 L17 38 M31 14 L31 38 M10 20 L38 20 M10 32 L38 32" stroke="{bg}" stroke-width="1.5" opacity="0.8"/>
-  <path d="M24 45 L24 68" stroke="{ACCENT_YELLOW}" stroke-width="3.5" stroke-linecap="round"/>
+  <path d="M24 45 L24 68" stroke="{accent}" stroke-width="3.5" stroke-linecap="round"/>
   <path d="M22 56 L26 56 M21 61 L27 61" stroke="{bg}" stroke-width="2"/>
-  <path d="M46 26 L58 22 L54 42 L44 39 Z" fill="{ACCENT_YELLOW}"/>
-  <circle cx="49" cy="42" r="3.5" fill="{ACCENT_YELLOW}"/>
+  <path d="M46 26 L58 22 L54 42 L44 39 Z" fill="{accent}"/>
+  <circle cx="49" cy="42" r="3.5" fill="{accent}"/>
   <path d="M47 28 L55 25" stroke="{bg}" stroke-width="1.5"/>
   <path d="M48 33 L56 30" stroke="{bg}" stroke-width="1.5"/>
 </svg>"""
+
+def notice_svg(color):
+    return f"""<svg width="34" height="34" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink: 0;">
+  <g transform="rotate(-10 18 18)">
+    <path d="M8 14.5L23.5 8V28L8 21.5V14.5Z" fill="{color}" stroke="{color}" stroke-width="1.8" stroke-linejoin="round"/>
+    <path d="M4.5 15.2C3.67 15.2 3 15.87 3 16.7V19.3C3 20.13 3.67 20.8 4.5 20.8H8V15.2H4.5Z" fill="{color}"/>
+    <path d="M11 22.5L13.5 29C13.8 29.8 14.7 30.2 15.5 29.9C16.3 29.6 16.7 28.7 16.4 27.9L14.3 22.5" stroke="{color}" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M27.5 13L31.5 10.5" stroke="{color}" stroke-width="2.4" stroke-linecap="round"/>
+    <path d="M28.2 18H33" stroke="{color}" stroke-width="2.4" stroke-linecap="round"/>
+    <path d="M27.5 23L31.5 25.5" stroke="{color}" stroke-width="2.4" stroke-linecap="round"/>
+  </g>
+</svg>"""
+
+def uploaded_file_to_data_uri(uploaded_file):
+    """將使用者上傳的圖片轉為內嵌 data URI，過大的點陣圖自動等比例縮放。"""
+    if uploaded_file is None:
+        return ""
+    raw_bytes = uploaded_file.getvalue()
+    if not raw_bytes:
+        return ""
+    name = (uploaded_file.name or "").lower()
+    if name.endswith(".svg"):
+        b64 = base64.b64encode(raw_bytes).decode()
+        return f"data:image/svg+xml;base64,{b64}"
+
+    mime = "image/png"
+    if name.endswith((".jpg", ".jpeg")):
+        mime = "image/jpeg"
+    elif name.endswith(".webp"):
+        mime = "image/webp"
+
+    try:
+        img = Image.open(io.BytesIO(raw_bytes))
+        max_dim = 400
+        if img.width > max_dim or img.height > max_dim:
+            resample = getattr(Image, "Resampling", Image).LANCZOS
+            img.thumbnail((max_dim, max_dim), resample)
+            buf = io.BytesIO()
+            fmt = "PNG"
+            if mime == "image/jpeg":
+                img = img.convert("RGB")
+                fmt = "JPEG"
+            elif mime == "image/webp":
+                fmt = "WEBP"
+            img.save(buf, format=fmt)
+            raw_bytes = buf.getvalue()
+    except Exception:
+        pass
+
+    b64 = base64.b64encode(raw_bytes).decode()
+    return f"data:{mime};base64,{b64}"
 
 # -----------------------------------------------------------------------------
 # 產生海報 HTML 核心函式 (預覽時移除外網字型載入以大幅加速)
@@ -229,6 +403,7 @@ def badge_svg(bg):
 def generate_poster_html(sub_title, main_title, tag_left, tag_right,
                          date1_title, data1_text, date2_title, data2_text,
                          extra_date="", extra_text="",
+                         notice_text="", badge_data_uri="",
                          body_font_size=28, theme_name="藍色體系", 
                          title_font_size=66, mode="整體流程表", preview=True):
     theme = THEMES[theme_name]
@@ -270,11 +445,13 @@ def generate_poster_html(sub_title, main_title, tag_left, tag_right,
     main_title = html_lib.escape(main_title)
     tag_left = html_lib.escape(tag_left)
     tag_right = html_lib.escape(tag_right)
+    notice_clean = html_lib.escape(notice_text.strip())
 
     has_sub = bool(sub_title.strip())
     has_main = bool(main_title.strip())
     has_tag_l = bool(tag_left.strip())
     has_tag_r = bool(tag_right.strip())
+    has_notice = bool(notice_clean)
     
     sub_html = f'<div class="sub-title">{sub_title}</div>' if has_sub else ''
     main_html = f'<div class="main-title">{main_title}</div>' if has_main else ''
@@ -286,16 +463,29 @@ def generate_poster_html(sub_title, main_title, tag_left, tag_right,
         tags_inner += f'<span class="tag-white">{tag_right}</span>'
         
     tags_html = f'<div class="tags">{tags_inner}</div>' if (has_tag_l or has_tag_r) else ''
-    badge_html = f'<div class="badge-icon">{badge_svg(bg_color)}</div>' if (has_sub or has_main or has_tag_l or has_tag_r) else ''
+    notice_html = (
+        f'<div class="notice-banner">{notice_svg(theme["notice_icon"])}'
+        f'<span class="notice-text">{notice_clean}</span></div>'
+        if has_notice else ''
+    )
+
+    if badge_data_uri:
+        badge_inner = f'<img src="{badge_data_uri}" alt="badge" class="badge-img" />'
+    else:
+        badge_inner = badge_svg(bg_color, theme["badge"])
+
+    has_header_content = bool(badge_data_uri or has_sub or has_main or has_tag_l or has_tag_r or has_notice)
+    badge_html = f'<div class="badge-icon">{badge_inner}</div>' if has_header_content else ''
     
     header_content = ""
-    if badge_html or sub_html or main_html or tags_html:
+    if has_header_content:
         header_content = f"""
   <div class="header">
     {badge_html}
     {sub_html}
     {main_html}
     {tags_html}
+    {notice_html}
   </div>"""
 
     if preview:
@@ -354,7 +544,7 @@ def generate_poster_html(sub_title, main_title, tag_left, tag_right,
   #poster {{
     background-color: {bg_color};
     font-family: 'Noto Sans TC', 'Microsoft JhengHei', 'PingFang TC', sans-serif;
-    color: #ffffff;
+    color: {theme['title']};
     width: {POSTER_WIDTH}px;
     padding: 60px 54px {BOTTOM_PAD}px 54px;
     box-sizing: border-box;
@@ -363,21 +553,49 @@ def generate_poster_html(sub_title, main_title, tag_left, tag_right,
     align-items: center;
     transform-origin: top left;
   }}
-  .header {{ text-align: center; margin-bottom: 46px; width: 100%; }}
-  .badge-icon {{ height: 76px; margin-bottom: 14px; line-height: 0; }}
+  .header {{ text-align: center; margin-bottom: 40px; width: 100%; }}
+  .badge-icon {{
+    min-height: 76px; max-height: 92px; margin-bottom: 14px; line-height: 0;
+    display: flex; justify-content: center; align-items: center;
+  }}
+  .badge-img {{
+    max-height: 88px; max-width: 260px; width: auto; height: auto;
+    object-fit: contain; border-radius: 8px;
+  }}
   .sub-title {{ color: {theme['sub']}; font-size: 40px; font-weight: 800; line-height: 1.3; }}
   .main-title {{
     font-size: {title_font_size}px; font-weight: 800; line-height: 1.2;
-    margin: 4px 0 20px 0; color: #ffffff; letter-spacing: 1px;
+    margin: 4px 0 20px 0; color: {theme['title']}; letter-spacing: 1px;
   }}
-  .tags {{ display: flex; justify-content: center; gap: 20px; }}
+  .tags {{ display: flex; justify-content: center; gap: 20px; flex-wrap: wrap; }}
   .tag-yellow {{
-    background-color: {ACCENT_YELLOW}; color: #1f1a05; font-weight: 700;
+    background-color: {theme['tag_l_bg']}; color: {theme['tag_l_fg']}; font-weight: 700;
     padding: 12px 38px; border-radius: 40px; font-size: 28px; line-height: 1.4;
   }}
   .tag-white {{
-    background-color: #ffffff; color: #1f2937; font-weight: 700;
+    background-color: {theme['tag_r_bg']}; color: {theme['tag_r_fg']}; font-weight: 700;
     padding: 12px 38px; border-radius: 40px; font-size: 28px; line-height: 1.4;
+    border: 2px solid {theme['tag_r_border']};
+  }}
+  .notice-banner {{
+    width: 100%;
+    box-sizing: border-box;
+    margin-top: 22px;
+    padding: 14px 28px;
+    border-radius: 999px;
+    background-color: {theme['notice_bg']};
+    border: 2px solid {theme['notice_border']};
+    color: {theme['notice_fg']};
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+  }}
+  .notice-text {{
+    font-size: {body_font_size}px;
+    font-weight: 800;
+    line-height: 1.4;
+    text-align: left;
   }}
   .section-container {{ width: 100%; }}
   .section-title {{
@@ -392,6 +610,7 @@ def generate_poster_html(sub_title, main_title, tag_left, tag_right,
   .card {{
     background-color: #ffffff; border-radius: 14px; overflow: hidden;
     display: flex; flex-direction: column;
+    border: 2px solid {theme['card_border']};
   }}
   .time-header {{
     background-color: {theme['header']}; text-align: center; padding: 16px 0;
@@ -407,7 +626,7 @@ def generate_poster_html(sub_title, main_title, tag_left, tag_right,
 
   /* 個人賽程專屬樣式 */
   .p-main-date {{
-    font-size: {body_font_size + 4}px; font-weight: 800; color: {ACCENT_YELLOW};
+    font-size: {body_font_size + 4}px; font-weight: 800; color: {theme['date_accent']};
     text-align: center; margin: 30px 0 14px 0; letter-spacing: 1px;
   }}
   .p-section-title {{
@@ -418,6 +637,7 @@ def generate_poster_html(sub_title, main_title, tag_left, tag_right,
   .p-box {{
     background-color: #ffffff; border-radius: 14px; overflow: hidden;
     padding: 10px 24px; margin-bottom: 16px;
+    border: 2px solid {theme['card_border']};
   }}
   .p-row {{
     display: flex; align-items: center; padding: 12px 0;
@@ -488,6 +708,11 @@ col_s1, col_s2 = st.columns(2)
 with col_s1:
     main_title = st.text_input("主標題 (選填)", value="MAUC 秋季賽")
     sub_title = st.text_input("副標題 / 隊伍名稱 (選填)", value="2026年牧羽盃全國四季聯賽")
+    notice_text = st.text_input(
+        "公告 / 注意事項橫幅 (選填，前方會自動加上喇叭符號)",
+        value="",
+        placeholder="例如：此賽事需要全隊低中高年級團進團出，再請留意！"
+    )
 with col_s2:
     tag_right = st.text_input("右側標籤 / 日期 (選填)", value="日期：2026/09/28（一）")
     tag_left_gen = st.text_input("整體流程表左側標籤", value="整體流程表")
@@ -500,6 +725,14 @@ with col_c2:
     body_font_size = st.slider("內文字體大小 (px)", min_value=18, max_value=40, value=26)
 with col_c3:
     title_font_size = st.slider("主標題字體大小 (px)", min_value=48, max_value=130, value=66)
+
+badge_file = st.file_uploader(
+    "頂部圖示 / 隊徽 (選填，未上傳則使用預設羽球圖示)",
+    type=["png", "jpg", "jpeg", "webp", "svg"],
+    key="badge_upload",
+    help="預設顯示內建羽球拍圖示；上傳圖片後將自動取代頂部圖示（建議使用去背 PNG 或 SVG）。"
+)
+badge_data_uri = uploaded_file_to_data_uri(badge_file)
 
 st.markdown("---")
 
@@ -547,6 +780,7 @@ kwargs_gen = dict(
     date2_title=st.session_state["g_date2"], data2_text=st.session_state["g_text2"],
     extra_date=st.session_state["extra_date"] if st.session_state["extra_date"].strip() else "",
     extra_text=st.session_state["extra_gen_text"] if st.session_state["extra_date"].strip() else "",
+    notice_text=notice_text, badge_data_uri=badge_data_uri,
     body_font_size=body_font_size, theme_name=theme_name,
     title_font_size=title_font_size, mode="整體流程表"
 )
@@ -557,15 +791,18 @@ kwargs_per = dict(
     tag_left=tag_left_per, tag_right=tag_right,
     date1_title="", data1_text=st.session_state["personal_text"],
     date2_title="", data2_text="",
+    notice_text=notice_text, badge_data_uri=badge_data_uri,
     body_font_size=body_font_size, theme_name=theme_name,
     title_font_size=title_font_size, mode="選手個人賽程"
 )
+
+notice_extra_px = 70 if notice_text.strip() else 0
 
 with col_prev1:
     st.subheader("🌐 【整體流程表】預覽")
     if st.session_state["g_text1"].strip() or st.session_state["g_text2"].strip():
         html_g_prev, metric_g = generate_poster_html(preview=True, **kwargs_gen)
-        preview_height_g = int(350 + metric_g * 65)
+        preview_height_g = int(350 + notice_extra_px + metric_g * 65)
         st.components.v1.html(html_g_prev, height=preview_height_g, scrolling=False)
         
         if st.button("🚀 產出【整體流程表】PNG 圖片", type="primary", key="btn_g"):
@@ -583,7 +820,7 @@ with col_prev2:
     st.subheader("🌐 【選手個人賽程】預覽")
     if st.session_state["personal_text"].strip():
         html_p_prev, metric_p = generate_poster_html(preview=True, **kwargs_per)
-        preview_height_p = int(350 + metric_p * 65)
+        preview_height_p = int(350 + notice_extra_px + metric_p * 65)
         st.components.v1.html(html_p_prev, height=preview_height_p, scrolling=False)
         
         if st.button("🚀 產出【選手個人賽程】PNG 圖片", type="primary", key="btn_p"):
