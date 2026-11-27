@@ -24,15 +24,43 @@ DEFAULT_ARENA_BG_PATH = os.path.join("/tmp", "arena_bg_fallback.jpg")
 
 BG_OPT_ARENA = "1. 預設羽球場底圖 (arena_bg.jpg)"
 BG_OPT_RACKET_ICON = "2. 球拍 icon"
-BG_OPT_UPLOAD = "3. 自行上傳"
+BG_OPT_CUSTOM_UPLOAD = "3. 自行上傳"
 BG_OPT_NONE = "4. 不使用底圖"
 
 BG_IMAGE_OPTIONS = [
     BG_OPT_ARENA,
     BG_OPT_RACKET_ICON,
-    BG_OPT_UPLOAD,
+    BG_OPT_CUSTOM_UPLOAD,
     BG_OPT_NONE,
 ]
+
+FONT_OPTIONS = {
+    "思源黑體 (俐落現代・推薦)": dict(
+        css_family="'Noto Sans TC', 'Microsoft JhengHei', 'PingFang TC', sans-serif",
+        gf_family="Noto+Sans+TC:wght@700;800;900",
+        use_noto_b64=True,
+    ),
+    "思源宋體 (沉穩正式・盃賽感)": dict(
+        css_family="'Noto Serif TC', 'PMingLiU', serif",
+        gf_family="Noto+Serif+TC:wght@700;900",
+        use_noto_b64=False,
+    ),
+    "醒目黑體 (高衝擊力・海報標題)": dict(
+        css_family="'Dela Gothic One', 'Noto Sans TC', 'Microsoft JhengHei', sans-serif",
+        gf_family="Dela+Gothic+One&family=Noto+Sans+TC:wght@800;900",
+        use_noto_b64=True,
+    ),
+    "圓體風格 (活潑親切・校園組別)": dict(
+        css_family="'Noto Sans TC', 'Microsoft JhengHei', 'PingFang TC', sans-serif",
+        gf_family="Noto+Sans+TC:wght@700;800;900",
+        use_noto_b64=True,
+    ),
+    "系統原生黑體 (免載入・最快速)": dict(
+        css_family="'Microsoft JhengHei', 'PingFang TC', 'Noto Sans TC', sans-serif",
+        gf_family="",
+        use_noto_b64=False,
+    ),
+}
 
 
 def _find_local_arena_bg():
@@ -49,7 +77,7 @@ def _find_local_arena_bg():
 
 
 def _generate_default_arena_bg_image(out_path=DEFAULT_ARENA_BG_PATH):
-    """若同層無可用底圖，於可寫入目錄產生備用底圖。"""
+    """若同層無可用底圖，在可寫入目錄產生備用底圖（不寫入唯讀的專案目錄）。"""
     try:
         if os.path.isfile(out_path) and os.path.getsize(out_path) > 100:
             return out_path
@@ -120,7 +148,7 @@ def _read_arena_bg_cached(path, mtime):
 
 
 def get_default_arena_bg_data_uri():
-    """取得預設羽球場底圖 data URI；無法讀取時安全回傳空字串。"""
+    """取得預設羽球場底圖的 data URI；若無法讀取則安全回傳空字串。"""
     path = _find_local_arena_bg()
     if not path:
         path = _generate_default_arena_bg_image(DEFAULT_ARENA_BG_PATH)
@@ -493,21 +521,24 @@ def _mix_hex(hex1, hex2, ratio):
     return f"#{r:02x}{g:02x}{b:02x}"
 
 
-def get_theme_gradient(theme):
-    if theme.get("bg_gradient"):
-        return theme["bg_gradient"]
-    bg = theme["bg"]
-    header = theme["header"]
-    if _is_light_color(bg):
-        top = _mix_hex(bg, "#ffffff", 0.55)
-        bottom = _mix_hex(bg, header, 0.14)
-    else:
-        top = _mix_hex(bg, header, 0.24)
-        bottom = _mix_hex(bg, "#000000", 0.34)
-    return f"linear-gradient(160deg, {top} 0%, {bg} 48%, {bottom} 100%)"
+def get_theme_gradient_css(theme):
+    """取得海報漸層背景 CSS。"""
+    grad = theme.get("bg_gradient")
+    if not grad:
+        bg = theme["bg"]
+        header = theme["header"]
+        if _is_light_color(bg):
+            top = _mix_hex(bg, "#ffffff", 0.55)
+            bottom = _mix_hex(bg, header, 0.14)
+        else:
+            top = _mix_hex(bg, header, 0.24)
+            bottom = _mix_hex(bg, "#000000", 0.34)
+        grad = f"linear-gradient(160deg, {top} 0%, {bg} 48%, {bottom} 100%)"
+    return f"background-image: {grad};"
 
 
 def build_custom_theme(bg, bg2, header, accent, title_color, sub_and_icon_color):
+    """依使用者自選顏色組裝漸層色系，並自動計算反差與卡片邊框。"""
     mid_bg = _mix_hex(bg, bg2, 0.5)
     is_light_bg = _is_light_color(mid_bg)
     is_light_header = _is_light_color(header)
@@ -541,7 +572,7 @@ def build_custom_theme(bg, bg2, header, accent, title_color, sub_and_icon_color)
 
 @st.cache_resource
 def get_font_base64():
-    font_path = os.path.join(APP_DIR, "NotoSansTC.ttf")
+    font_path = os.path.abspath("NotoSansTC.ttf")
     if not os.path.exists(font_path):
         try:
             url = "https://github.com/google/fonts/raw/main/ofl/notosanstc/NotoSansTC%5Bwght%5D.ttf"
@@ -566,8 +597,10 @@ if "g_date2" not in st.session_state:
     st.session_state["g_date2"] = ""
 if "g_text2" not in st.session_state:
     st.session_state["g_text2"] = ""
+
 if "personal_text" not in st.session_state:
     st.session_state["personal_text"] = ""
+
 if "extra_days_count" not in st.session_state:
     st.session_state["extra_days_count"] = 1
 for _idx in range(1, MAX_EXTRA_DAYS + 1):
@@ -783,6 +816,7 @@ def notice_symbol_svg(symbol_name, color, size=34):
 
 
 def uploaded_file_to_data_uri(uploaded_file, max_dim=400):
+    """將使用者上傳的圖片轉為內嵌 data URI，過大的點陣圖自動等比例縮放。"""
     if uploaded_file is None:
         return ""
     raw_bytes = uploaded_file.getvalue()
@@ -801,7 +835,7 @@ def uploaded_file_to_data_uri(uploaded_file, max_dim=400):
 
     try:
         img = Image.open(io.BytesIO(raw_bytes))
-        if img.width > max_dim or img.height > max_dim:
+        if max_dim and (img.width > max_dim or img.height > max_dim):
             resample = getattr(Image, "Resampling", Image).LANCZOS
             img.thumbnail((max_dim, max_dim), resample)
             buf = io.BytesIO()
@@ -811,7 +845,7 @@ def uploaded_file_to_data_uri(uploaded_file, max_dim=400):
                 fmt = "JPEG"
             elif mime == "image/webp":
                 fmt = "WEBP"
-            img.save(buf, format=fmt, quality=90)
+            img.save(buf, format=fmt)
             raw_bytes = buf.getvalue()
     except Exception:
         pass
@@ -824,29 +858,36 @@ def generate_poster_html(sub_title, main_title, tag_left, tag_right,
                          date1_title, data1_text, date2_title, data2_text,
                          extra_date="", extra_text="", extra_days=None,
                          notice_text="", notice_symbol="喇叭", notice_font_size=28,
-                         bg_image_choice=BG_OPT_ARENA, custom_bg_uri="", badge_data_uri="",
+                         bg_image_choice=BG_OPT_ARENA, custom_bg_uri="",
                          body_font_size=28, theme_name="藍色體系", custom_theme=None,
-                         title_font_size=66, mode="整體流程表", preview=True):
+                         title_font_size=66, font_choice="思源黑體 (俐落現代・推薦)",
+                         mode="整體流程表", preview=True):
     theme = custom_theme if custom_theme is not None else THEMES[theme_name]
     bg_color = theme["bg"]
-    bg_gradient = get_theme_gradient(theme)
+    grad_css = get_theme_gradient_css(theme)
     header_fg = theme.get("header_fg", "#ffffff")
+
+    font_cfg = FONT_OPTIONS.get(font_choice, FONT_OPTIONS["思源黑體 (俐落現代・推薦)"])
+    selected_font_family = font_cfg["css_family"]
+    gf_param = font_cfg.get("gf_family", "")
+    gf_link_html = (
+        f'<link rel="preconnect" href="https://fonts.googleapis.com">'
+        f'<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>'
+        f'<link href="https://fonts.googleapis.com/css2?family={gf_param}&display=swap" rel="stylesheet">'
+        if gf_param else ""
+    )
+
+    # 決定背景底圖 URI（僅在選擇 1. 預設羽球場底圖 或 3. 自行上傳 時啟用）
+    bg_img_uri = ""
+    if bg_image_choice == BG_OPT_ARENA:
+        bg_img_uri = get_default_arena_bg_data_uri()
+    elif bg_image_choice == BG_OPT_CUSTOM_UPLOAD and custom_bg_uri:
+        bg_img_uri = custom_bg_uri
+
+    # 輸出 PNG 時 body 使用不重複的純色作為裁切基準，讓海報依實際內容高度精準裁切
     r_bg, g_bg, b_bg = _hex_to_rgb(bg_color)
     sentinel_bg = "#fe01fe" if g_bg > 180 and r_bg < 80 else "#01fe01"
     body_bg = bg_color if preview else sentinel_bg
-
-    if bg_image_choice == BG_OPT_ARENA:
-        arena_uri = get_default_arena_bg_data_uri()
-        if arena_uri:
-            bg_layer_html = f"""<img src="{arena_uri}" alt="arena-bg" class="poster-bg-img" />
-  <div class="poster-bg-overlay" style="background: linear-gradient(180deg, rgba(24, 4, 7, 0.42) 0%, rgba(24, 4, 7, 0.62) 55%, rgba(16, 2, 4, 0.85) 100%);"></div>"""
-        else:
-            bg_layer_html = f"""<div class="poster-bg-overlay" style="background-image: {bg_gradient};"></div>"""
-    elif bg_image_choice == BG_OPT_UPLOAD and custom_bg_uri:
-        bg_layer_html = f"""<img src="{custom_bg_uri}" alt="custom-bg" class="poster-bg-img" />
-  <div class="poster-bg-overlay" style="background: linear-gradient(180deg, rgba(0, 0, 0, 0.28) 0%, rgba(0, 0, 0, 0.48) 100%);"></div>"""
-    else:
-        bg_layer_html = f"""<div class="poster-bg-overlay" style="background-image: {bg_gradient};"></div>"""
 
     total_metric = 0
     body_content = ""
@@ -884,29 +925,29 @@ def generate_poster_html(sub_title, main_title, tag_left, tag_right,
     {body_content_html}
   </div>"""
 
-    sub_title = html_lib.escape(sub_title)
-    main_title = html_lib.escape(main_title)
-    tag_left = html_lib.escape(tag_left)
-    tag_right = html_lib.escape(tag_right)
+    sub_title_e = html_lib.escape(sub_title)
+    main_title_e = html_lib.escape(main_title)
+    tag_left_e = html_lib.escape(tag_left)
+    tag_right_e = html_lib.escape(tag_right)
     notice_clean = html_lib.escape(notice_text.strip())
 
-    has_sub = bool(sub_title.strip())
-    has_main = bool(main_title.strip())
-    has_tag_l = bool(tag_left.strip())
-    has_tag_r = bool(tag_right.strip())
+    has_sub = bool(sub_title_e.strip())
+    has_main = bool(main_title_e.strip())
+    has_tag_l = bool(tag_left_e.strip())
+    has_tag_r = bool(tag_right_e.strip())
     has_notice = bool(notice_clean)
 
-    sub_html = f'<div class="sub-title">{sub_title}</div>' if has_sub else ""
-    main_html = f'<div class="main-title">{main_title}</div>' if has_main else ""
+    sub_html = f'<div class="sub-title">{sub_title_e}</div>' if has_sub else ""
+    main_html = f'<div class="main-title">{main_title_e}</div>' if has_main else ""
 
     tags_inner = ""
     if has_tag_l:
-        tags_inner += f'<span class="tag-yellow">{tag_left}</span>'
+        tags_inner += f'<span class="tag-yellow">{tag_left_e}</span>'
     if has_tag_r:
-        tags_inner += f'<span class="tag-white">{tag_right}</span>'
+        tags_inner += f'<span class="tag-white">{tag_right_e}</span>'
 
     tags_html = f'<div class="tags">{tags_inner}</div>' if (has_tag_l or has_tag_r) else ""
-    notice_icon_size = max(24, int(notice_font_size * 0.9))
+    notice_icon_size = max(24, int(notice_font_size * 0.95))
     symbol_html = notice_symbol_svg(notice_symbol, theme["notice_icon"], size=notice_icon_size)
     notice_html = (
         f'<div class="notice-banner">{symbol_html}'
@@ -914,19 +955,14 @@ def generate_poster_html(sub_title, main_title, tag_left, tag_right,
         if has_notice else ""
     )
 
-    if badge_data_uri:
-        badge_inner = f'<img src="{badge_data_uri}" alt="badge" class="badge-img" />'
-    elif bg_image_choice == BG_OPT_RACKET_ICON:
+    # 頂部圖示：僅在「2. 球拍 icon」時顯示球拍；其他選項皆保留等高佔位，避免標題往上移
+    if bg_image_choice == BG_OPT_RACKET_ICON:
         badge_inner = badge_svg(bg_color, theme["badge"])
     else:
         badge_inner = '<span class="badge-spacer" aria-hidden="true"></span>'
+    badge_html = f'<div class="badge-icon">{badge_inner}</div>'
 
-    has_header_content = bool(badge_data_uri or bg_image_choice == BG_OPT_RACKET_ICON or has_sub or has_main or has_tag_l or has_tag_r or has_notice)
-    badge_html = f'<div class="badge-icon">{badge_inner}</div>' if has_header_content else ""
-
-    header_content = ""
-    if has_header_content:
-        header_content = f"""
+    header_content = f"""
   <div class="header">
     {badge_html}
     {sub_html}
@@ -935,19 +971,24 @@ def generate_poster_html(sub_title, main_title, tag_left, tag_right,
     {notice_html}
   </div>"""
 
+    bg_layer_html = ""
+    if bg_img_uri:
+        bg_layer_html = f'<img src="{bg_img_uri}" alt="bg" class="poster-bg-img" />'
+
     if preview:
-        font_css = ""
+        font_css = gf_link_html
     else:
-        b64 = get_font_base64()
-        font_css = ""
+        b64 = get_font_base64() if font_cfg.get("use_noto_b64") else ""
+        embedded_css = ""
         if b64:
-            font_css = f"""<style>
+            embedded_css = f"""<style>
 @font-face {{
   font-family: 'Noto Sans TC';
   font-weight: 100 900;
   src: url('data:font/ttf;base64,{b64}') format('truetype');
 }}
 </style>"""
+        font_css = f"{gf_link_html}\n{embedded_css}"
 
     preview_script = ""
     if preview:
@@ -971,6 +1012,8 @@ def generate_poster_html(sub_title, main_title, tag_left, tag_right,
     wrap_open = '<div id="wrap">' if preview else ""
     wrap_close = "</div>" if preview else ""
 
+    overlay_alpha = "0.52" if bg_img_uri else "1.0"
+
     html_content = f"""<!DOCTYPE html>
 <html>
 <head>
@@ -990,9 +1033,8 @@ def generate_poster_html(sub_title, main_title, tag_left, tag_right,
   }}
   #poster {{
     position: relative;
-    overflow: hidden;
     background-color: {bg_color};
-    font-family: 'Noto Sans TC', 'Microsoft JhengHei', 'PingFang TC', sans-serif;
+    font-family: {selected_font_family};
     color: {theme['title']};
     width: {POSTER_WIDTH}px;
     padding: 60px 54px {BOTTOM_PAD}px 54px;
@@ -1001,38 +1043,40 @@ def generate_poster_html(sub_title, main_title, tag_left, tag_right,
     flex-direction: column;
     align-items: center;
     transform-origin: top left;
+    overflow: hidden;
   }}
   .poster-bg-img {{
     position: absolute;
-    top: 0;
-    left: 0;
+    inset: 0;
     width: 100%;
     height: 100%;
     object-fit: cover;
     z-index: 0;
     pointer-events: none;
   }}
-  .poster-bg-overlay {{
+  .poster-grad-overlay {{
     position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
+    inset: 0;
+    {grad_css}
+    opacity: {overlay_alpha};
     z-index: 1;
     pointer-events: none;
   }}
-  .header, .section-container {{
+  .poster-content {{
     position: relative;
     z-index: 2;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
   }}
   .header {{ text-align: center; margin-bottom: 40px; width: 100%; }}
   .badge-icon {{
-    min-height: 76px; max-height: 92px; margin-bottom: 14px; line-height: 0;
+    height: 76px; min-height: 76px; max-height: 92px; margin-bottom: 14px; line-height: 0;
     display: flex; justify-content: center; align-items: center;
   }}
-  .badge-img {{
-    max-height: 88px; max-width: 260px; width: auto; height: auto;
-    object-fit: contain; border-radius: 8px;
+  .badge-spacer {{
+    display: inline-block; width: 68px; height: 76px;
   }}
   .sub-title {{ color: {theme['sub']}; font-size: 40px; font-weight: 800; line-height: 1.3; }}
   .main-title {{
@@ -1064,7 +1108,7 @@ def generate_poster_html(sub_title, main_title, tag_left, tag_right,
     gap: 16px;
   }}
   .notice-text {{
-    font-family: 'Noto Sans TC', 'Microsoft JhengHei', 'PingFang TC', sans-serif;
+    font-family: {selected_font_family};
     font-size: {notice_font_size}px;
     font-weight: 800;
     line-height: 1.25;
@@ -1098,6 +1142,7 @@ def generate_poster_html(sub_title, main_title, tag_left, tag_right,
   .cate-m {{ color: {theme['male']}; font-weight: 800; }}
   .cate-f {{ color: {FEMALE_COLOR}; font-weight: 800; }}
 
+  /* 個人賽程專屬樣式 */
   .p-main-date {{
     font-size: {body_font_size + 4}px; font-weight: 800; color: {theme['date_accent']};
     text-align: center; margin: 30px 0 14px 0; letter-spacing: 1px;
@@ -1131,8 +1176,11 @@ def generate_poster_html(sub_title, main_title, tag_left, tag_right,
 {wrap_open}
 <div id="poster">
   {bg_layer_html}
-  {header_content}
-  {body_content}
+  <div class="poster-grad-overlay"></div>
+  <div class="poster-content">
+    {header_content}
+    {body_content}
+  </div>
 </div>
 {wrap_close}
 {preview_script}
@@ -1143,16 +1191,12 @@ def generate_poster_html(sub_title, main_title, tag_left, tag_right,
 
 def render_png(html_str, total_metric, out_path="generated_schedule.png"):
     tall_height = max(2200, 1200 + total_metric * 160)
-    full_out_path = os.path.join("/tmp", os.path.basename(out_path))
 
-    if os.path.exists(full_out_path):
-        try:
-            os.remove(full_out_path)
-        except Exception:
-            pass
+    if os.path.exists(out_path):
+        os.remove(out_path)
 
     hti = Html2Image(
-        output_path="/tmp",
+        output_path=".",
         custom_flags=[
             "--no-sandbox",
             "--disable-dev-shm-usage",
@@ -1161,22 +1205,26 @@ def render_png(html_str, total_metric, out_path="generated_schedule.png"):
             "--virtual-time-budget=10000",
         ],
     )
-    hti.screenshot(html_str=html_str, save_as=os.path.basename(full_out_path), size=(POSTER_WIDTH, tall_height))
+    hti.screenshot(html_str=html_str, save_as=out_path, size=(POSTER_WIDTH, tall_height))
 
-    img = Image.open(full_out_path).convert("RGB")
+    img = Image.open(out_path).convert("RGB")
     sentinel_rgb = img.getpixel((2, img.height - 2))
     diff = ImageChops.difference(img, Image.new("RGB", img.size, sentinel_rgb))
     bbox = diff.getbbox()
     if bbox:
         crop_h = bbox[3] - 2 if (bbox[3] < img.height - 4 and bbox[3] > 20) else bbox[3]
         img = img.crop((0, 0, POSTER_WIDTH, crop_h))
-    img.save(full_out_path)
-    return full_out_path
+    img.save(out_path)
+    return out_path
 
 
+# -----------------------------------------------------------------------------
+# 主畫面 (雙表並排架構)
+# -----------------------------------------------------------------------------
 st.title("🏸 羽球隊賽程圖片產生器 (雙表同步產出)")
 st.write("請在下方設定共用樣式，並分別填入**整體流程表**與**選手個人賽程**資料，系統將同時產出兩張完整海報！")
 
+# 1. 標題、版型與樣式設定
 st.header("⚙️ 1. 標題、版型與樣式設定 (兩張表共用)")
 col_s1, col_s2 = st.columns(2)
 with col_s1:
@@ -1204,16 +1252,18 @@ with col_n2:
         index=0,
     )
 
-col_c1, col_c2, col_c3, col_c4 = st.columns(4)
+col_c1, col_c2, col_c3, col_c4, col_c5 = st.columns([1.4, 1.4, 1, 1, 1])
 with col_c1:
     theme_options = list(THEMES.keys()) + [CUSTOM_THEME_LABEL]
     theme_name = st.selectbox("整體色系", theme_options)
 with col_c2:
-    body_font_size = st.slider("內文字體大小 (px)", min_value=18, max_value=40, value=26)
+    font_choice = st.selectbox("海報中文字體", list(FONT_OPTIONS.keys()), index=0)
 with col_c3:
-    title_font_size = st.slider("主標題字體大小 (px)", min_value=48, max_value=130, value=66)
+    body_font_size = st.slider("內文字體大小 (px)", min_value=18, max_value=40, value=26)
 with col_c4:
-    notice_font_size = st.slider("公告橫幅字體大小 (px，獨立設定)", min_value=18, max_value=130, value=28)
+    title_font_size = st.slider("主標題字體大小 (px)", min_value=48, max_value=130, value=66)
+with col_c5:
+    notice_font_size = st.slider("公告橫幅字體大小 (px)", min_value=18, max_value=130, value=28)
 
 custom_theme = None
 if theme_name == CUSTOM_THEME_LABEL:
@@ -1240,28 +1290,24 @@ with col_b1:
         "底圖選擇",
         BG_IMAGE_OPTIONS,
         index=0,
-        help="1. 預設羽球場底圖讀取同層 arena_bg.jpg；2. 球拍 icon 顯示預設球拍圖示；3. 自行上傳可自選底圖；4. 不使用底圖僅套用色系。",
     )
 with col_b2:
-    badge_file = st.file_uploader(
-        "頂部圖示 / 隊徽 (選填，上傳後可取代頂部圖示)",
-        type=["png", "jpg", "jpeg", "webp", "svg"],
-        key="badge_upload",
-    )
-
-custom_bg_uri = ""
-if bg_image_choice == BG_OPT_UPLOAD:
-    bg_upload_file = st.file_uploader(
-        "上傳自訂底圖 (選擇「3. 自行上傳」時生效)",
-        type=["png", "jpg", "jpeg", "webp", "svg"],
+    custom_bg_file = st.file_uploader(
+        "自行上傳底圖 (選擇「3. 自行上傳」時生效)",
+        type=["png", "jpg", "jpeg", "webp"],
         key="custom_bg_upload",
+        disabled=(bg_image_choice != BG_OPT_CUSTOM_UPLOAD),
+        help="選擇「3. 自行上傳」後上傳圖片，即可作為海報背景底圖。",
     )
-    custom_bg_uri = uploaded_file_to_data_uri(bg_upload_file, max_dim=1080)
-
-badge_data_uri = uploaded_file_to_data_uri(badge_file, max_dim=400)
+custom_bg_uri = (
+    uploaded_file_to_data_uri(custom_bg_file, max_dim=1440)
+    if bg_image_choice == BG_OPT_CUSTOM_UPLOAD
+    else ""
+)
 
 st.markdown("---")
 
+# 2 & 3. 賽程資料編輯區 (左右並排，使用 key 確保輸入不被重置)
 col_input1, col_input2 = st.columns(2)
 
 with col_input1:
@@ -1299,6 +1345,7 @@ def _remove_extra_day():
         st.session_state["extra_days_count"] -= 1
 
 
+# 額外天數擴充 (僅整體流程表，上限共 10 天)
 with st.expander("➕ 點此新增更多天數賽程 (整體流程表專用)"):
     cur_extra = st.session_state["extra_days_count"]
     total_days_now = 2 + cur_extra
@@ -1330,6 +1377,7 @@ with st.expander("➕ 點此新增更多天數賽程 (整體流程表專用)"):
 
 st.markdown("---")
 
+# 4. 即時預覽與圖片下載 (左右並排呈現兩張海報 - 長度依內容自動調整)
 st.header("🖼️ 4. 即時預覽與圖片下載 (左右兩張)")
 
 col_prev1, col_prev2 = st.columns(2)
@@ -1359,11 +1407,11 @@ kwargs_gen = dict(
     notice_font_size=notice_font_size,
     bg_image_choice=bg_image_choice,
     custom_bg_uri=custom_bg_uri,
-    badge_data_uri=badge_data_uri,
     body_font_size=body_font_size,
     theme_name=theme_name,
     custom_theme=custom_theme,
     title_font_size=title_font_size,
+    font_choice=font_choice,
     mode="整體流程表",
 )
 
@@ -1381,11 +1429,11 @@ kwargs_per = dict(
     notice_font_size=notice_font_size,
     bg_image_choice=bg_image_choice,
     custom_bg_uri=custom_bg_uri,
-    badge_data_uri=badge_data_uri,
     body_font_size=body_font_size,
     theme_name=theme_name,
     custom_theme=custom_theme,
     title_font_size=title_font_size,
+    font_choice=font_choice,
     mode="選手個人賽程",
 )
 
