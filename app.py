@@ -15,11 +15,21 @@ st.set_page_config(
     layout="wide",
 )
 
-POSTER_WIDTH = 1080       # 海報固定寬度 (px)
-BOTTOM_PAD = 120          # 海報底部留白 (px)
-FEMALE_COLOR = "#be1e4a"  # 女子組別文字色
-ACCENT_YELLOW = "#f0c030" # 黃色標籤與圖示
-DEFAULT_ARENA_BG_PATH = os.path.abspath("arena_bg.jpg")
+POSTER_WIDTH = 1080        # 海報固定寬度 (px)
+BOTTOM_PAD = 120           # 海報底部留白 (px)
+FEMALE_COLOR = "#be1e4a"   # 女子組別文字色
+ACCENT_YELLOW = "#f0c030"  # 黃色標籤與圖示
+
+APP_DIR = os.path.dirname(os.path.abspath(__file__))
+DEFAULT_ARENA_BG_PATH = os.path.join(APP_DIR, "arena_bg.jpg")
+
+
+def _find_local_arena_bg():
+    for fname in ("arena_bg.jpg", "arena_bg.jpeg", "arena_bg.png"):
+        p = os.path.join(APP_DIR, fname)
+        if os.path.exists(p) and os.path.getsize(p) > 0:
+            return p
+    return ""
 
 
 def _generate_default_arena_bg_image(out_path=DEFAULT_ARENA_BG_PATH):
@@ -115,13 +125,21 @@ def _generate_default_arena_bg_image(out_path=DEFAULT_ARENA_BG_PATH):
     return out_path if os.path.exists(out_path) else ""
 
 
-@st.cache_resource
+@st.cache_data(show_spinner=False)
+def _read_arena_bg_cached(path, mtime):
+    with open(path, "rb") as f:
+        ext = os.path.splitext(path)[1].lower()
+    mime = "image/png" if ext == ".png" else "image/jpeg"
+    return f"data:{mime};base64," + base64.b64encode(f.read()).decode()
+
+
 def get_default_arena_bg_data_uri():
-    """取得預設羽球場底圖的 data URI。"""
-    path = _generate_default_arena_bg_image()
+    """取得預設羽球場底圖的 data URI（依檔案修改時間自動更新快取）。"""
+    path = _find_local_arena_bg()
+    if not path:
+        path = _generate_default_arena_bg_image(DEFAULT_ARENA_BG_PATH)
     if path and os.path.exists(path):
-        with open(path, "rb") as f:
-            return "data:image/jpeg;base64," + base64.b64encode(f.read()).decode()
+        return _read_arena_bg_cached(path, os.path.getmtime(path))
     return ""
 
 
@@ -548,7 +566,7 @@ def build_custom_theme(bg, bg2, header, accent, title_color, sub_and_icon_color)
 # -----------------------------------------------------------------------------
 @st.cache_resource
 def get_font_base64():
-    font_path = os.path.abspath("NotoSansTC.ttf")
+    font_path = os.path.join(APP_DIR, "NotoSansTC.ttf")
     if not os.path.exists(font_path):
         try:
             url = "https://github.com/google/fonts/raw/main/ofl/notosanstc/NotoSansTC%5Bwght%5D.ttf"
@@ -1237,211 +1255,3 @@ with col_c2:
     body_font_size = st.slider("內文字體大小 (px)", min_value=18, max_value=40, value=26)
 with col_c3:
     title_font_size = st.slider("主標題與公告字體大小 (px)", min_value=48, max_value=130, value=66)
-with col_c4:
-    notice_font_size = st.slider("公告橫幅字體大小 (px，與主標題同步)", min_value=18, max_value=130, value=title_font_size)
-
-custom_theme = None
-if theme_name == CUSTOM_THEME_LABEL:
-    st.caption("🎨 自訂色盤：可自由挑選漸層背景、標題列與重點色（上下背景設同色即為純色），系統會自動搭配反差與邊框。")
-    cp1, cp2, cp3 = st.columns(3)
-    with cp1:
-        c_bg = st.color_picker("背景漸層色 (上)", "#fce7f3", key="cp_bg")
-    with cp2:
-        c_bg2 = st.color_picker("背景漸層色 (下)", "#f9a8d4", key="cp_bg2")
-    with cp3:
-        c_header = st.color_picker("卡片標題列色", "#db2777", key="cp_header")
-    cp4, cp5, cp6 = st.columns(3)
-    with cp4:
-        c_accent = st.color_picker("徽章與左側標籤色", "#facc15", key="cp_accent")
-    with cp5:
-        c_title = st.color_picker("主標題文字色", "#831843", key="cp_title")
-    with cp6:
-        c_sub = st.color_picker("副標題與喇叭色", "#be185d", key="cp_sub")
-    custom_theme = build_custom_theme(c_bg, c_bg2, c_header, c_accent, c_title, c_sub)
-
-col_b1, col_b2 = st.columns([1.2, 2.8])
-with col_b1:
-    bg_image_choice = st.selectbox(
-        "底圖選擇",
-        BG_IMAGE_OPTIONS,
-        index=0,
-        help="預設羽球場底圖已存為 arena_bg.jpg；可自行切換是否套用底圖，不會強制套用到所有底圖。",
-    )
-with col_b2:
-    badge_file = st.file_uploader(
-        "頂部圖示 / 隊徽 (選填，未上傳則使用預設羽球圖示)",
-        type=["png", "jpg", "jpeg", "webp", "svg"],
-        key="badge_upload",
-        help="預設顯示內建羽球拍圖示；上傳圖片後將自動取代頂部圖示（建議使用去背 PNG 或 SVG）。",
-    )
-badge_data_uri = uploaded_file_to_data_uri(badge_file)
-
-st.markdown("---")
-
-# 2 & 3. 賽程資料編輯區 (左右並排，使用 key 確保輸入不被重置)
-col_input1, col_input2 = st.columns(2)
-
-with col_input1:
-    st.header("📝 2. 賽程資料編輯區 (整體流程表)")
-    st.info("💡 請先將賽程截圖並用 AI 處理文字。給 AI 提示詞範例：'請將這張圖改成可直接複製到網頁的格式(包含斷行)，選手僅帶出XX國小的即可。格式：時間 ｜ 組別 ｜ 選手 (如：08:00 | 國小五年級男單 | 王大明)'")
-
-    st.text_input("第一天日期說明 (整體)", key="g_date1")
-    st.text_area("第一天賽程 (整體)", key="g_text1", height=180, placeholder="09:00 ｜ 低男單 ｜ 王大明")
-
-    st.text_input("第二天日期說明 (整體・若無可留空)", key="g_date2")
-    st.text_area("第二天賽程 (整體)", key="g_text2", height=180, placeholder="若無第二天請保持空白...")
-
-with col_input2:
-    st.header("📝 3. 賽程資料編輯區 (選手個人賽程)")
-    st.info("💡 請先將賽程截圖並用 AI 處理文字。給 AI 提示詞範例：'依據附圖格式，將所有選手按日期、年級組別進行歸類與整合，並列出每位選手參加的項目與所有出場時間。'")
-
-    st.text_area(
-        "選手個人賽程內容 (一格貼全部)",
-        key="personal_text",
-        height=420,
-        placeholder="",
-    )
-
-
-def _add_extra_day():
-    if st.session_state["extra_days_count"] < MAX_EXTRA_DAYS:
-        st.session_state["extra_days_count"] += 1
-
-
-def _remove_extra_day():
-    if st.session_state["extra_days_count"] > 1:
-        idx = st.session_state["extra_days_count"]
-        st.session_state[f"g_extra_date_{idx}"] = ""
-        st.session_state[f"g_extra_text_{idx}"] = ""
-        st.session_state["extra_days_count"] -= 1
-
-
-# 額外天數擴充 (僅整體流程表，上限共 10 天)
-with st.expander("➕ 點此新增更多天數賽程 (整體流程表專用)"):
-    cur_extra = st.session_state["extra_days_count"]
-    total_days_now = 2 + cur_extra
-    col_btn_add, col_btn_rem, col_day_info = st.columns([1.2, 1.2, 2.6])
-    with col_btn_add:
-        st.button(
-            "➕ 新增一天" if total_days_now < MAX_TOTAL_DAYS else "已達上限 10 天",
-            on_click=_add_extra_day,
-            disabled=(total_days_now >= MAX_TOTAL_DAYS),
-            key="btn_add_day",
-            use_container_width=True,
-        )
-    with col_btn_rem:
-        st.button(
-            "➖ 移除最後一天",
-            on_click=_remove_extra_day,
-            disabled=(cur_extra <= 1),
-            key="btn_rem_day",
-            use_container_width=True,
-        )
-    with col_day_info:
-        st.caption(f"目前共有第 1 ～ {total_days_now} 天（上限 {MAX_TOTAL_DAYS} 天）")
-
-    for i in range(1, cur_extra + 1):
-        day_num = 2 + i
-        st.markdown(f"**第 {day_num} 天**")
-        st.text_input(f"第 {day_num} 天日期說明 (整體)", key=f"g_extra_date_{i}")
-        st.text_area(f"第 {day_num} 天賽程 (整體)", key=f"g_extra_text_{i}", height=120, placeholder=f"請貼上第 {day_num} 天賽程內容...")
-
-st.markdown("---")
-
-# 4. 即時預覽與圖片下載 (左右並排呈現兩張海報 - 長度依內容自動調整)
-st.header("🖼️ 4. 即時預覽與圖片下載 (左右兩張)")
-
-col_prev1, col_prev2 = st.columns(2)
-
-extra_days_payload = [
-    (st.session_state[f"g_extra_date_{i}"], st.session_state[f"g_extra_text_{i}"])
-    for i in range(1, st.session_state["extra_days_count"] + 1)
-]
-has_gen_content = (
-    bool(st.session_state["g_text1"].strip())
-    or bool(st.session_state["g_text2"].strip())
-    or any(t.strip() for _, t in extra_days_payload)
-)
-
-# 組裝整體流程表參數
-kwargs_gen = dict(
-    sub_title=sub_title,
-    main_title=main_title,
-    tag_left=tag_left_gen,
-    tag_right=tag_right,
-    date1_title=st.session_state["g_date1"],
-    data1_text=st.session_state["g_text1"],
-    date2_title=st.session_state["g_date2"],
-    data2_text=st.session_state["g_text2"],
-    extra_days=extra_days_payload,
-    notice_text=notice_text,
-    notice_symbol=notice_symbol,
-    notice_font_size=title_font_size,
-    bg_image_choice=bg_image_choice,
-    badge_data_uri=badge_data_uri,
-    body_font_size=body_font_size,
-    theme_name=theme_name,
-    custom_theme=custom_theme,
-    title_font_size=title_font_size,
-    mode="整體流程表",
-)
-
-# 組裝選手個人賽程參數
-kwargs_per = dict(
-    sub_title=sub_title,
-    main_title=main_title,
-    tag_left=tag_left_per,
-    tag_right=tag_right,
-    date1_title="",
-    data1_text=st.session_state["personal_text"],
-    date2_title="",
-    data2_text="",
-    notice_text=notice_text,
-    notice_symbol=notice_symbol,
-    notice_font_size=title_font_size,
-    bg_image_choice=bg_image_choice,
-    badge_data_uri=badge_data_uri,
-    body_font_size=body_font_size,
-    theme_name=theme_name,
-    custom_theme=custom_theme,
-    title_font_size=title_font_size,
-    mode="選手個人賽程",
-)
-
-notice_extra_px = (title_font_size + 56) if notice_text.strip() else 0
-
-with col_prev1:
-    st.subheader("🌐 【整體流程表】預覽")
-    if has_gen_content:
-        html_g_prev, metric_g = generate_poster_html(preview=True, **kwargs_gen)
-        preview_height_g = int(350 + notice_extra_px + metric_g * 65)
-        st.components.v1.html(html_g_prev, height=preview_height_g, scrolling=False)
-
-        if st.button("🚀 產出【整體流程表】PNG 圖片", type="primary", key="btn_g"):
-            with st.spinner("正在轉換為高解析圖片..."):
-                html_g_png, metric_g = generate_poster_html(preview=False, **kwargs_gen)
-                path_g = render_png(html_g_png, metric_g, out_path="general_schedule.png")
-                if os.path.exists(path_g):
-                    st.image(path_g, caption="整體流程表產出預覽", use_container_width=True)
-                    with open(path_g, "rb") as f:
-                        st.download_button("⬇️ 下載整體流程表 (PNG)", data=f, file_name="整體流程表.png", mime="image/png", key="dl_g")
-    else:
-        st.info("請在左上方填入整體流程表資料以顯示預覽。")
-
-with col_prev2:
-    st.subheader("🌐 【選手個人賽程】預覽")
-    if st.session_state["personal_text"].strip():
-        html_p_prev, metric_p = generate_poster_html(preview=True, **kwargs_per)
-        preview_height_p = int(350 + notice_extra_px + metric_p * 65)
-        st.components.v1.html(html_p_prev, height=preview_height_p, scrolling=False)
-
-        if st.button("🚀 產出【選手個人賽程】PNG 圖片", type="primary", key="btn_p"):
-            with st.spinner("正在轉換為高解析圖片..."):
-                html_p_png, metric_p = generate_poster_html(preview=False, **kwargs_per)
-                path_p = render_png(html_p_png, metric_p, out_path="personal_schedule.png")
-                if os.path.exists(path_p):
-                    st.image(path_p, caption="選手個人賽程產出預覽", use_container_width=True)
-                    with open(path_p, "rb") as f:
-                        st.download_button("⬇️ 下載選手個人賽程 (PNG)", data=f, file_name="選手個人賽程.png", mime="image/png", key="dl_p")
-    else:
-        st.info("請在右上方填入選手個人賽程資料以顯示預覽。")
