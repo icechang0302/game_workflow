@@ -19,27 +19,113 @@ POSTER_WIDTH = 1080       # 海報固定寬度 (px)
 BOTTOM_PAD = 120          # 海報底部留白 (px)
 FEMALE_COLOR = "#be1e4a"  # 女子組別文字色
 ACCENT_YELLOW = "#f0c030" # 黃色標籤與圖示
+DEFAULT_ARENA_BG_PATH = os.path.abspath("arena_bg.jpg")
 
 
-def _load_arena_bg_data_uri():
-    """載入羽球場底圖並轉為內嵌 data URI。"""
-    candidate_paths = [
-        "arena_bg.jpg",
-        "arena_bg.png",
-        "",
-    ]
-    for p in candidate_paths:
-        if os.path.exists(p):
-            with open(p, "rb") as f:
-                raw = f.read()
-            mime = "image/jpeg" if p.lower().endswith((".jpg", ".jpeg")) else "image/png"
-            return f"data:{mime};base64,{base64.b64encode(raw).decode()}"
+def _generate_default_arena_bg_image(out_path=DEFAULT_ARENA_BG_PATH):
+    """若本機尚無預設羽球場底圖，自動渲染並儲存成 arena_bg.jpg。"""
+    if os.path.exists(out_path) and os.path.getsize(out_path) > 0:
+        return out_path
+
+    bg_html = """<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  html, body {
+    margin: 0;
+    padding: 0;
+    width: 1080px;
+    height: 1920px;
+    overflow: hidden;
+    background: radial-gradient(circle at 50% 18%, #7a1420 0%, #3b0910 52%, #180306 100%);
+  }
+  .lights {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 1080px;
+    height: 540px;
+    background:
+      radial-gradient(ellipse at 22% 16%, rgba(255, 224, 150, 0.35), transparent 55%),
+      radial-gradient(ellipse at 50% 12%, rgba(255, 236, 179, 0.42), transparent 58%),
+      radial-gradient(ellipse at 78% 16%, rgba(255, 224, 150, 0.35), transparent 55%);
+  }
+  .crowd {
+    position: absolute;
+    top: 150px;
+    left: -40px;
+    width: 1160px;
+    height: 460px;
+    opacity: 0.28;
+    filter: blur(5px);
+    background-image:
+      radial-gradient(circle, rgba(255, 240, 210, 0.7) 2px, transparent 3px),
+      radial-gradient(circle, rgba(255, 195, 140, 0.5) 2.5px, transparent 4px);
+    background-size: 28px 24px, 38px 32px;
+    background-position: 0 0, 14px 12px;
+  }
+  .court-floor {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 1080px;
+    height: 1220px;
+    background:
+      linear-gradient(180deg, rgba(24, 4, 7, 0.1) 0%, rgba(42, 8, 13, 0.65) 45%, rgba(20, 3, 6, 0.92) 100%),
+      repeating-linear-gradient(90deg, rgba(160, 45, 58, 0.14) 0px, rgba(160, 45, 58, 0.14) 4px, transparent 4px, transparent 72px);
+  }
+  .court-line {
+    position: absolute;
+    left: 110px;
+    right: 110px;
+    height: 3px;
+    background: rgba(255, 224, 150, 0.22);
+  }
+  .line-1 { top: 820px; }
+  .line-2 { top: 1140px; }
+  .line-3 { top: 1520px; }
+</style>
+</head>
+<body>
+  <div class="lights"></div>
+  <div class="crowd"></div>
+  <div class="court-floor"></div>
+  <div class="court-line line-1"></div>
+  <div class="court-line line-2"></div>
+  <div class="court-line line-3"></div>
+</body>
+</html>"""
+    try:
+        hti = Html2Image(
+            output_path=os.path.dirname(out_path) or ".",
+            custom_flags=[
+                "--no-sandbox",
+                "--hide-scrollbars",
+                "--force-device-scale-factor=1",
+                "--virtual-time-budget=5000",
+            ],
+        )
+        hti.screenshot(html_str=bg_html, save_as=os.path.basename(out_path), size=(POSTER_WIDTH, 1920))
+        if os.path.exists(out_path):
+            img = Image.open(out_path).convert("RGB")
+            img.save(out_path, format="JPEG", quality=92)
+    except Exception:
+        pass
+    return out_path if os.path.exists(out_path) else ""
+
+
+@st.cache_resource
+def get_default_arena_bg_data_uri():
+    """取得預設羽球場底圖的 data URI。"""
+    path = _generate_default_arena_bg_image()
+    if path and os.path.exists(path):
+        with open(path, "rb") as f:
+            return "data:image/jpeg;base64," + base64.b64encode(f.read()).decode()
     return ""
 
 
-ARENA_BG_DATA_URI = _load_arena_bg_data_uri()
-
-# 色系設定（含原有深色系、新增亮色系與羽球場底圖選項）
+# 色系設定（含原有深色系、新增亮色系與主場狂龍暗紅）
 THEMES = {
     # --- 原有深色系 ---
     "藍色體系": dict(
@@ -315,19 +401,7 @@ THEMES = {
         notice_bg="#ffffff", notice_border="#e879f9", notice_fg="#4a044e", notice_icon="#c026d3",
         tag_m_bg="#dbeafe", tag_m_fg="#1e40af", tag_f_bg="#fae8ff", tag_f_fg="#a21caf",
     ),
-    # --- 參考賽事海報經典配色與羽球場底圖 ---
-    "主場狂龍暗紅 (羽球場底圖)": dict(
-        bg="#240709",
-        bg_gradient="linear-gradient(180deg, rgba(36, 7, 9, 0.55) 0%, rgba(36, 7, 9, 0.72) 55%, rgba(21, 3, 5, 0.88) 100%)",
-        bg_image_url=ARENA_BG_DATA_URI,
-        header="#8b1020", male="#1d4f9f", sub="#fca5a5",
-        title="#ffffff", badge="#fbbf24", date_accent="#fde047",
-        tag_l_bg="#fbbf24", tag_l_fg="#240709",
-        tag_r_bg="#ffffff", tag_r_fg="#450a0a", tag_r_border="transparent",
-        card_border="transparent",
-        notice_bg="#fff5f5", notice_border="#fbbf24", notice_fg="#450a0a", notice_icon="#b91c1c",
-        tag_m_bg="#dbeafe", tag_m_fg="#1e40af", tag_f_bg="#ffe4e6", tag_f_fg="#be1e4a",
-    ),
+    # --- 參考賽事海報經典配色 ---
     "主場狂龍暗紅 (經典配色)": dict(
         bg="#240709", bg_gradient="linear-gradient(160deg, #5c0c15 0%, #2b070b 48%, #150305 100%)",
         header="#8b1020", male="#1d4f9f", sub="#fca5a5",
@@ -393,16 +467,24 @@ NOTICE_SYMBOL_OPTIONS = [
     "不顯示符號",
 ]
 
+BG_IMAGE_OPTIONS = [
+    "預設羽球場底圖",
+    "不使用底圖（純漸層/色系）",
+]
+
+
 def _hex_to_rgb(hex_str):
     h = hex_str.lstrip("#")
     if len(h) != 6:
         return (19, 33, 75)
     return tuple(int(h[i:i + 2], 16) for i in (0, 2, 4))
 
+
 def _is_light_color(hex_str):
     r, g, b = _hex_to_rgb(hex_str)
     luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255.0
     return luminance >= 0.6
+
 
 def _mix_hex(hex1, hex2, ratio):
     r1, g1, b1 = _hex_to_rgb(hex1)
@@ -412,29 +494,21 @@ def _mix_hex(hex1, hex2, ratio):
     b = int(b1 * (1 - ratio) + b2 * ratio)
     return f"#{r:02x}{g:02x}{b:02x}"
 
-def get_theme_background_css(theme):
-    """取得海報背景 CSS；支援純漸層或底圖搭配遮罩漸層。"""
-    grad = theme.get("bg_gradient")
-    if not grad:
-        bg = theme["bg"]
-        header = theme["header"]
-        if _is_light_color(bg):
-            top = _mix_hex(bg, "#ffffff", 0.55)
-            bottom = _mix_hex(bg, header, 0.14)
-        else:
-            top = _mix_hex(bg, header, 0.24)
-            bottom = _mix_hex(bg, "#000000", 0.34)
-        grad = f"linear-gradient(160deg, {top} 0%, {bg} 48%, {bottom} 100%)"
 
-    bg_img_uri = theme.get("bg_image_url", "")
-    if bg_img_uri:
-        return (
-            f"background-image: {grad}, url('{bg_img_uri}'); "
-            f"background-size: 100% 100%, {POSTER_WIDTH}px auto; "
-            f"background-position: center top, center top; "
-            f"background-repeat: no-repeat, no-repeat;"
-        )
-    return f"background-image: {grad};"
+def get_theme_gradient(theme):
+    """取得色系背景漸層；未指定時依主色與標題色自動產生自然漸層。"""
+    if theme.get("bg_gradient"):
+        return theme["bg_gradient"]
+    bg = theme["bg"]
+    header = theme["header"]
+    if _is_light_color(bg):
+        top = _mix_hex(bg, "#ffffff", 0.55)
+        bottom = _mix_hex(bg, header, 0.14)
+    else:
+        top = _mix_hex(bg, header, 0.24)
+        bottom = _mix_hex(bg, "#000000", 0.34)
+    return f"linear-gradient(160deg, {top} 0%, {bg} 48%, {bottom} 100%)"
+
 
 def build_custom_theme(bg, bg2, header, accent, title_color, sub_and_icon_color):
     """依使用者自選顏色組裝漸層色系，並自動計算反差與卡片邊框。"""
@@ -468,6 +542,7 @@ def build_custom_theme(bg, bg2, header, accent, title_color, sub_and_icon_color)
         tag_f_fg="#be1e4a",
     )
 
+
 # -----------------------------------------------------------------------------
 # 中文字型 (PNG 用：轉成 base64 內嵌)
 # -----------------------------------------------------------------------------
@@ -485,6 +560,7 @@ def get_font_base64():
             return base64.b64encode(f.read()).decode()
     except Exception:
         return ""
+
 
 # -----------------------------------------------------------------------------
 # Session State 初始化
@@ -511,6 +587,7 @@ for _idx in range(1, MAX_EXTRA_DAYS + 1):
         st.session_state[f"g_extra_date_{_idx}"] = ""
     if f"g_extra_text_{_idx}" not in st.session_state:
         st.session_state[f"g_extra_text_{_idx}"] = ""
+
 
 # -----------------------------------------------------------------------------
 # 解析整體流程表文字 → 卡片 HTML (同時間且同組別以「、」自動合併選手)
@@ -560,6 +637,7 @@ def parse_text_to_cards(text):
           <div class="content">{items_html}</div>
         </div>"""
     return cards_html, len(order)
+
 
 # -----------------------------------------------------------------------------
 # 解析選手個人賽程文字 (支援多天、分類與管線格式)
@@ -660,6 +738,7 @@ def parse_personal_integrated_text(text):
 
     return full_html, max(1, total_metric)
 
+
 # -----------------------------------------------------------------------------
 # 羽球拍與羽球組合專屬圖示 (預設圖示) 與 公告前導符號
 # -----------------------------------------------------------------------------
@@ -674,6 +753,7 @@ def badge_svg(bg, accent=ACCENT_YELLOW):
   <path d="M47 28 L55 25" stroke="{bg}" stroke-width="1.5"/>
   <path d="M48 33 L56 30" stroke="{bg}" stroke-width="1.5"/>
 </svg>"""
+
 
 def notice_symbol_svg(symbol_name, color, size=34):
     if symbol_name == "不顯示符號":
@@ -711,7 +791,6 @@ def notice_symbol_svg(symbol_name, color, size=34):
   <path d="M15 26.5C15.5 28.5 16.7 29.5 18 29.5C19.3 29.5 20.5 28.5 21 26.5" stroke="{color}" stroke-width="2.6" stroke-linecap="round"/>
 </svg>"""
 
-    # 預設：喇叭
     return f"""<svg width="{size}" height="{size}" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink: 0;">
   <g transform="rotate(-10 18 18)">
     <path d="M8 14.5L23.5 8V28L8 21.5V14.5Z" fill="{color}" stroke="{color}" stroke-width="1.8" stroke-linejoin="round"/>
@@ -722,6 +801,7 @@ def notice_symbol_svg(symbol_name, color, size=34):
     <path d="M27.5 23L31.5 25.5" stroke="{color}" stroke-width="2.4" stroke-linecap="round"/>
   </g>
 </svg>"""
+
 
 def uploaded_file_to_data_uri(uploaded_file):
     """將使用者上傳的圖片轉為內嵌 data URI，過大的點陣圖自動等比例縮放。"""
@@ -762,6 +842,7 @@ def uploaded_file_to_data_uri(uploaded_file):
     b64 = base64.b64encode(raw_bytes).decode()
     return f"data:{mime};base64,{b64}"
 
+
 # -----------------------------------------------------------------------------
 # 產生海報 HTML 核心函式 (預覽時移除外網字型載入以大幅加速)
 # -----------------------------------------------------------------------------
@@ -769,17 +850,25 @@ def generate_poster_html(sub_title, main_title, tag_left, tag_right,
                          date1_title, data1_text, date2_title, data2_text,
                          extra_date="", extra_text="", extra_days=None,
                          notice_text="", notice_symbol="喇叭", notice_font_size=26,
-                         badge_mode="預設羽球圖示", badge_data_uri="",
+                         bg_image_choice="預設羽球場底圖", badge_data_uri="",
                          body_font_size=28, theme_name="藍色體系", custom_theme=None,
                          title_font_size=66, mode="整體流程表", preview=True):
     theme = custom_theme if custom_theme is not None else THEMES[theme_name]
     bg_color = theme["bg"]
-    bg_css = get_theme_background_css(theme)
+    bg_gradient = get_theme_gradient(theme)
     header_fg = theme.get("header_fg", "#ffffff")
     # 輸出 PNG 時 body 使用不重複的純色作為裁切基準，讓海報依實際內容高度精準裁切
     r_bg, g_bg, b_bg = _hex_to_rgb(bg_color)
     sentinel_bg = "#fe01fe" if g_bg > 180 and r_bg < 80 else "#01fe01"
     body_bg = bg_color if preview else sentinel_bg
+
+    use_arena_bg = (bg_image_choice == "預設羽球場底圖")
+    arena_uri = get_default_arena_bg_data_uri() if use_arena_bg else ""
+    if use_arena_bg and arena_uri:
+        bg_layer_html = f"""<img src="{arena_uri}" alt="arena-bg" class="poster-bg-img" />
+  <div class="poster-bg-overlay" style="background: linear-gradient(180deg, rgba(24, 4, 7, 0.42) 0%, rgba(24, 4, 7, 0.62) 55%, rgba(16, 2, 4, 0.85) 100%);"></div>"""
+    else:
+        bg_layer_html = f"""<div class="poster-bg-overlay" style="background-image: {bg_gradient};"></div>"""
 
     total_metric = 0
     body_content = ""
@@ -847,19 +936,13 @@ def generate_poster_html(sub_title, main_title, tag_left, tag_right,
         if has_notice else ""
     )
 
-    show_badge = True
-    if badge_mode == "不顯示頂部圖示":
-        show_badge = False
-        badge_inner = ""
-    elif badge_mode == "自訂上傳圖示" and badge_data_uri:
-        badge_inner = f'<img src="{badge_data_uri}" alt="badge" class="badge-img" />'
-    elif badge_data_uri:
+    if badge_data_uri:
         badge_inner = f'<img src="{badge_data_uri}" alt="badge" class="badge-img" />'
     else:
         badge_inner = badge_svg(bg_color, theme["badge"])
 
-    has_header_content = bool(show_badge or has_sub or has_main or has_tag_l or has_tag_r or has_notice)
-    badge_html = f'<div class="badge-icon">{badge_inner}</div>' if show_badge else ""
+    has_header_content = bool(badge_data_uri or has_sub or has_main or has_tag_l or has_tag_r or has_notice)
+    badge_html = f'<div class="badge-icon">{badge_inner}</div>' if has_header_content else ""
 
     header_content = ""
     if has_header_content:
@@ -926,8 +1009,9 @@ def generate_poster_html(sub_title, main_title, tag_left, tag_right,
     position: relative;
   }}
   #poster {{
+    position: relative;
+    overflow: hidden;
     background-color: {bg_color};
-    {bg_css}
     font-family: 'Noto Sans TC', 'Microsoft JhengHei', 'PingFang TC', sans-serif;
     color: {theme['title']};
     width: {POSTER_WIDTH}px;
@@ -937,6 +1021,29 @@ def generate_poster_html(sub_title, main_title, tag_left, tag_right,
     flex-direction: column;
     align-items: center;
     transform-origin: top left;
+  }}
+  .poster-bg-img {{
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    z-index: 0;
+    pointer-events: none;
+  }}
+  .poster-bg-overlay {{
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1;
+    pointer-events: none;
+  }}
+  .header, .section-container {{
+    position: relative;
+    z-index: 2;
   }}
   .header {{ text-align: center; margin-bottom: 40px; width: 100%; }}
   .badge-icon {{
@@ -1044,6 +1151,7 @@ def generate_poster_html(sub_title, main_title, tag_left, tag_right,
 <body>
 {wrap_open}
 <div id="poster">
+  {bg_layer_html}
   {header_content}
   {body_content}
 </div>
@@ -1052,6 +1160,7 @@ def generate_poster_html(sub_title, main_title, tag_left, tag_right,
 </body>
 </html>"""
     return html_content, max(1, total_metric)
+
 
 # -----------------------------------------------------------------------------
 # 輸出 PNG
@@ -1083,9 +1192,12 @@ def render_png(html_str, total_metric, out_path="generated_schedule.png"):
     img.save(out_path)
     return out_path
 
+
 # -----------------------------------------------------------------------------
 # 主畫面 (雙表並排架構)
 # -----------------------------------------------------------------------------
+_generate_default_arena_bg_image()
+
 st.title("🏸 羽球隊賽程圖片產生器 (雙表同步產出)")
 st.write("請在下方設定共用樣式，並分別填入**整體流程表**與**選手個人賽程**資料，系統將同時產出兩張完整海報！")
 
@@ -1149,10 +1261,11 @@ if theme_name == CUSTOM_THEME_LABEL:
 
 col_b1, col_b2 = st.columns([1.2, 2.8])
 with col_b1:
-    badge_mode = st.selectbox(
-        "頂部圖示顯示方式",
-        ["預設羽球圖示", "自訂上傳圖示", "不顯示頂部圖示"],
+    bg_image_choice = st.selectbox(
+        "底圖選擇",
+        BG_IMAGE_OPTIONS,
         index=0,
+        help="預設羽球場底圖已存為 arena_bg.jpg；可自行切換是否套用底圖，不會強制套用到所有底圖。",
     )
 with col_b2:
     badge_file = st.file_uploader(
@@ -1162,8 +1275,6 @@ with col_b2:
         help="預設顯示內建羽球拍圖示；上傳圖片後將自動取代頂部圖示（建議使用去背 PNG 或 SVG）。",
     )
 badge_data_uri = uploaded_file_to_data_uri(badge_file)
-if badge_data_uri and badge_mode == "預設羽球圖示":
-    badge_mode = "自訂上傳圖示"
 
 st.markdown("---")
 
@@ -1191,9 +1302,11 @@ with col_input2:
         placeholder="",
     )
 
+
 def _add_extra_day():
     if st.session_state["extra_days_count"] < MAX_EXTRA_DAYS:
         st.session_state["extra_days_count"] += 1
+
 
 def _remove_extra_day():
     if st.session_state["extra_days_count"] > 1:
@@ -1201,6 +1314,7 @@ def _remove_extra_day():
         st.session_state[f"g_extra_date_{idx}"] = ""
         st.session_state[f"g_extra_text_{idx}"] = ""
         st.session_state["extra_days_count"] -= 1
+
 
 # 額外天數擴充 (僅整體流程表，上限共 10 天)
 with st.expander("➕ 點此新增更多天數賽程 (整體流程表專用)"):
@@ -1263,7 +1377,7 @@ kwargs_gen = dict(
     notice_text=notice_text,
     notice_symbol=notice_symbol,
     notice_font_size=title_font_size,
-    badge_mode=badge_mode,
+    bg_image_choice=bg_image_choice,
     badge_data_uri=badge_data_uri,
     body_font_size=body_font_size,
     theme_name=theme_name,
@@ -1285,7 +1399,7 @@ kwargs_per = dict(
     notice_text=notice_text,
     notice_symbol=notice_symbol,
     notice_font_size=title_font_size,
-    badge_mode=badge_mode,
+    bg_image_choice=bg_image_choice,
     badge_data_uri=badge_data_uri,
     body_font_size=body_font_size,
     theme_name=theme_name,
