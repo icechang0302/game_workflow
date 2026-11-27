@@ -21,21 +21,29 @@ FEMALE_COLOR = "#be1e4a"   # 女子組別文字色
 ACCENT_YELLOW = "#f0c030"  # 黃色標籤與圖示
 
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
-DEFAULT_ARENA_BG_PATH = os.path.join(APP_DIR, "arena_bg.jpg")
+DEFAULT_ARENA_BG_PATH = os.path.join("/tmp", "arena_bg_fallback.jpg")
 
 
 def _find_local_arena_bg():
     for fname in ("arena_bg.jpg", "arena_bg.jpeg", "arena_bg.png"):
         p = os.path.join(APP_DIR, fname)
-        if os.path.exists(p) and os.path.getsize(p) > 0:
-            return p
+        try:
+            if os.path.isfile(p) and os.path.getsize(p) > 100:
+                with Image.open(p) as im:
+                    im.verify()
+                return p
+        except Exception:
+            continue
     return ""
 
 
 def _generate_default_arena_bg_image(out_path=DEFAULT_ARENA_BG_PATH):
-    """若本機尚無預設羽球場底圖，自動渲染並儲存成 arena_bg.jpg。"""
-    if os.path.exists(out_path) and os.path.getsize(out_path) > 0:
-        return out_path
+    """若同層無可用底圖，在可寫入目錄產生備用底圖（不寫入唯讀的專案目錄）。"""
+    try:
+        if os.path.isfile(out_path) and os.path.getsize(out_path) > 100:
+            return out_path
+    except Exception:
+        pass
 
     bg_html = """<!DOCTYPE html>
 <html>
@@ -50,96 +58,67 @@ def _generate_default_arena_bg_image(out_path=DEFAULT_ARENA_BG_PATH):
     overflow: hidden;
     background: radial-gradient(circle at 50% 18%, #7a1420 0%, #3b0910 52%, #180306 100%);
   }
-  .lights {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 1080px;
-    height: 540px;
-    background:
-      radial-gradient(ellipse at 22% 16%, rgba(255, 224, 150, 0.35), transparent 55%),
-      radial-gradient(ellipse at 50% 12%, rgba(255, 236, 179, 0.42), transparent 58%),
-      radial-gradient(ellipse at 78% 16%, rgba(255, 224, 150, 0.35), transparent 55%);
-  }
-  .crowd {
-    position: absolute;
-    top: 150px;
-    left: -40px;
-    width: 1160px;
-    height: 460px;
-    opacity: 0.28;
-    filter: blur(5px);
-    background-image:
-      radial-gradient(circle, rgba(255, 240, 210, 0.7) 2px, transparent 3px),
-      radial-gradient(circle, rgba(255, 195, 140, 0.5) 2.5px, transparent 4px);
-    background-size: 28px 24px, 38px 32px;
-    background-position: 0 0, 14px 12px;
-  }
   .court-floor {
     position: absolute;
     bottom: 0;
     left: 0;
     width: 1080px;
     height: 1220px;
-    background:
-      linear-gradient(180deg, rgba(24, 4, 7, 0.1) 0%, rgba(42, 8, 13, 0.65) 45%, rgba(20, 3, 6, 0.92) 100%),
-      repeating-linear-gradient(90deg, rgba(160, 45, 58, 0.14) 0px, rgba(160, 45, 58, 0.14) 4px, transparent 4px, transparent 72px);
+    background: linear-gradient(180deg, rgba(24, 4, 7, 0.1) 0%, rgba(42, 8, 13, 0.65) 45%, rgba(20, 3, 6, 0.92) 100%);
   }
-  .court-line {
-    position: absolute;
-    left: 110px;
-    right: 110px;
-    height: 3px;
-    background: rgba(255, 224, 150, 0.22);
-  }
-  .line-1 { top: 820px; }
-  .line-2 { top: 1140px; }
-  .line-3 { top: 1520px; }
 </style>
 </head>
 <body>
-  <div class="lights"></div>
-  <div class="crowd"></div>
   <div class="court-floor"></div>
-  <div class="court-line line-1"></div>
-  <div class="court-line line-2"></div>
-  <div class="court-line line-3"></div>
 </body>
 </html>"""
     try:
+        os.makedirs(os.path.dirname(out_path) or "/tmp", exist_ok=True)
         hti = Html2Image(
-            output_path=os.path.dirname(out_path) or ".",
+            output_path=os.path.dirname(out_path) or "/tmp",
             custom_flags=[
                 "--no-sandbox",
+                "--disable-dev-shm-usage",
                 "--hide-scrollbars",
                 "--force-device-scale-factor=1",
                 "--virtual-time-budget=5000",
             ],
         )
         hti.screenshot(html_str=bg_html, save_as=os.path.basename(out_path), size=(POSTER_WIDTH, 1920))
-        if os.path.exists(out_path):
+        if os.path.isfile(out_path) and os.path.getsize(out_path) > 0:
             img = Image.open(out_path).convert("RGB")
-            img.save(out_path, format="JPEG", quality=92)
+            img.save(out_path, format="JPEG", quality=90)
+            return out_path
     except Exception:
         pass
-    return out_path if os.path.exists(out_path) else ""
+    return ""
 
 
 @st.cache_data(show_spinner=False)
 def _read_arena_bg_cached(path, mtime):
-    with open(path, "rb") as f:
+    try:
+        with open(path, "rb") as f:
+            data = f.read()
+        if not data:
+            return ""
         ext = os.path.splitext(path)[1].lower()
-    mime = "image/png" if ext == ".png" else "image/jpeg"
-    return f"data:{mime};base64," + base64.b64encode(f.read()).decode()
+        mime = "image/png" if ext == ".png" else "image/jpeg"
+        return f"data:{mime};base64," + base64.b64encode(data).decode()
+    except Exception:
+        return ""
 
 
 def get_default_arena_bg_data_uri():
-    """取得預設羽球場底圖的 data URI（依檔案修改時間自動更新快取）。"""
+    """取得預設羽球場底圖的 data URI；若無法讀取則安全回傳空字串。"""
     path = _find_local_arena_bg()
     if not path:
         path = _generate_default_arena_bg_image(DEFAULT_ARENA_BG_PATH)
-    if path and os.path.exists(path):
-        return _read_arena_bg_cached(path, os.path.getmtime(path))
+    if path and os.path.isfile(path):
+        try:
+            mtime = os.path.getmtime(path)
+        except Exception:
+            mtime = 0
+        return _read_arena_bg_cached(path, mtime)
     return ""
 
 
