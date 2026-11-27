@@ -721,33 +721,6 @@ def parse_personal_integrated_text(text):
     return full_html, max(1, total_metric)
 
 
-def racket_shuttle_svg(stroke_color="#e8c878"):
-    """黃框內的金色羽球拍與羽球軌跡 SVG。"""
-    return f"""<svg viewBox="0 0 260 220" width="260" height="220" xmlns="http://www.w3.org/2000/svg">
-  <g transform="rotate(-24 105 112)">
-    <ellipse cx="105" cy="74" rx="34" ry="44" fill="none" stroke="{stroke_color}" stroke-width="4.2"/>
-    <ellipse cx="105" cy="74" rx="29" ry="39" fill="none" stroke="{stroke_color}" stroke-width="1.3" opacity="0.65"/>
-    <line x1="91" y1="36" x2="91" y2="112" stroke="{stroke_color}" stroke-width="1.2" opacity="0.7"/>
-    <line x1="105" y1="31" x2="105" y2="117" stroke="{stroke_color}" stroke-width="1.2" opacity="0.7"/>
-    <line x1="119" y1="36" x2="119" y2="112" stroke="{stroke_color}" stroke-width="1.2" opacity="0.7"/>
-    <line x1="73" y1="58" x2="137" y2="58" stroke="{stroke_color}" stroke-width="1.2" opacity="0.7"/>
-    <line x1="71" y1="74" x2="139" y2="74" stroke="{stroke_color}" stroke-width="1.2" opacity="0.7"/>
-    <line x1="73" y1="90" x2="137" y2="90" stroke="{stroke_color}" stroke-width="1.2" opacity="0.7"/>
-    <path d="M98 117 L101 134 L109 134 L112 117" fill="none" stroke="{stroke_color}" stroke-width="3.6" stroke-linejoin="round"/>
-    <line x1="105" y1="134" x2="105" y2="178" stroke="{stroke_color}" stroke-width="4.2" stroke-linecap="round"/>
-    <rect x="100" y="178" width="10" height="24" rx="3" fill="none" stroke="{stroke_color}" stroke-width="3.2"/>
-  </g>
-  <path d="M132 108 A46 46 0 1 1 82 62" fill="none" stroke="{stroke_color}" stroke-width="2" stroke-linecap="round" opacity="0.7"/>
-  <path d="M126 78 C154 62 182 46 212 30" fill="none" stroke="{stroke_color}" stroke-width="2.4" stroke-linecap="round"/>
-  <path d="M138 88 C164 72 188 56 214 38" fill="none" stroke="{stroke_color}" stroke-width="1.8" stroke-linecap="round" opacity="0.75"/>
-  <g transform="translate(216, 26) rotate(36)">
-    <ellipse cx="0" cy="11" rx="5.2" ry="6.2" fill="#f8fafc" stroke="{stroke_color}" stroke-width="1.5"/>
-    <path d="M-4 7 L-10 -12 L0 -15 L0 6 Z" fill="#f8fafc" stroke="{stroke_color}" stroke-width="1.3"/>
-    <path d="M0 6 L0 -15 L10 -12 L4 7 Z" fill="#e2e8f0" stroke="{stroke_color}" stroke-width="1.3"/>
-  </g>
-</svg>"""
-
-
 def badge_svg(bg, accent=ACCENT_YELLOW):
     return f"""<svg width="68" height="76" viewBox="0 0 68 76" xmlns="http://www.w3.org/2000/svg">
   <ellipse cx="24" cy="26" rx="15" ry="19" fill="none" stroke="{accent}" stroke-width="3.5"/>
@@ -850,7 +823,7 @@ def uploaded_file_to_data_uri(uploaded_file, max_dim=400):
 def generate_poster_html(sub_title, main_title, tag_left, tag_right,
                          date1_title, data1_text, date2_title, data2_text,
                          extra_date="", extra_text="", extra_days=None,
-                         notice_text="", notice_symbol="喇叭", notice_font_size=26,
+                         notice_text="", notice_symbol="喇叭", notice_font_size=28,
                          bg_image_choice=BG_OPT_ARENA, custom_bg_uri="", badge_data_uri="",
                          body_font_size=28, theme_name="藍色體系", custom_theme=None,
                          title_font_size=66, mode="整體流程表", preview=True):
@@ -869,10 +842,6 @@ def generate_poster_html(sub_title, main_title, tag_left, tag_right,
   <div class="poster-bg-overlay" style="background: linear-gradient(180deg, rgba(24, 4, 7, 0.42) 0%, rgba(24, 4, 7, 0.62) 55%, rgba(16, 2, 4, 0.85) 100%);"></div>"""
         else:
             bg_layer_html = f"""<div class="poster-bg-overlay" style="background-image: {bg_gradient};"></div>"""
-    elif bg_image_choice == BG_OPT_RACKET_ICON:
-        icon_color = "#e8c878" if not _is_light_color(bg_color) else theme["header"]
-        bg_layer_html = f"""<div class="poster-bg-overlay" style="background-image: {bg_gradient};"></div>
-  <div class="poster-bg-racket">{racket_shuttle_svg(icon_color)}</div>"""
     elif bg_image_choice == BG_OPT_UPLOAD and custom_bg_uri:
         bg_layer_html = f"""<img src="{custom_bg_uri}" alt="custom-bg" class="poster-bg-img" />
   <div class="poster-bg-overlay" style="background: linear-gradient(180deg, rgba(0, 0, 0, 0.28) 0%, rgba(0, 0, 0, 0.48) 100%);"></div>"""
@@ -937,7 +906,7 @@ def generate_poster_html(sub_title, main_title, tag_left, tag_right,
         tags_inner += f'<span class="tag-white">{tag_right}</span>'
 
     tags_html = f'<div class="tags">{tags_inner}</div>' if (has_tag_l or has_tag_r) else ""
-    notice_icon_size = max(28, int(title_font_size * 0.72))
+    notice_icon_size = max(24, int(notice_font_size * 0.9))
     symbol_html = notice_symbol_svg(notice_symbol, theme["notice_icon"], size=notice_icon_size)
     notice_html = (
         f'<div class="notice-banner">{symbol_html}'
@@ -947,11 +916,14 @@ def generate_poster_html(sub_title, main_title, tag_left, tag_right,
 
     if badge_data_uri:
         badge_inner = f'<img src="{badge_data_uri}" alt="badge" class="badge-img" />'
-    else:
+        badge_html = f'<div class="badge-icon">{badge_inner}</div>'
+    elif bg_image_choice == BG_OPT_RACKET_ICON:
         badge_inner = badge_svg(bg_color, theme["badge"])
+        badge_html = f'<div class="badge-icon">{badge_inner}</div>'
+    else:
+        badge_html = ""
 
-    has_header_content = bool(badge_data_uri or has_sub or has_main or has_tag_l or has_tag_r or has_notice)
-    badge_html = f'<div class="badge-icon">{badge_inner}</div>' if has_header_content else ""
+    has_header_content = bool(badge_html or has_sub or has_main or has_tag_l or has_tag_r or has_notice)
 
     header_content = ""
     if has_header_content:
@@ -1050,15 +1022,6 @@ def generate_poster_html(sub_title, main_title, tag_left, tag_right,
     z-index: 1;
     pointer-events: none;
   }}
-  .poster-bg-racket {{
-    position: absolute;
-    top: 6%;
-    left: 50%;
-    transform: translateX(-50%);
-    opacity: 0.28;
-    z-index: 1;
-    pointer-events: none;
-  }}
   .header, .section-container {{
     position: relative;
     z-index: 2;
@@ -1103,9 +1066,9 @@ def generate_poster_html(sub_title, main_title, tag_left, tag_right,
   }}
   .notice-text {{
     font-family: 'Noto Sans TC', 'Microsoft JhengHei', 'PingFang TC', sans-serif;
-    font-size: {title_font_size}px;
+    font-size: {notice_font_size}px;
     font-weight: 800;
-    line-height: 1.2;
+    line-height: 1.25;
     letter-spacing: 1px;
     text-align: left;
   }}
@@ -1249,9 +1212,9 @@ with col_c1:
 with col_c2:
     body_font_size = st.slider("內文字體大小 (px)", min_value=18, max_value=40, value=26)
 with col_c3:
-    title_font_size = st.slider("主標題與公告字體大小 (px)", min_value=48, max_value=130, value=66)
+    title_font_size = st.slider("主標題字體大小 (px)", min_value=48, max_value=130, value=66)
 with col_c4:
-    notice_font_size = st.slider("公告橫幅字體大小 (px，與主標題同步)", min_value=18, max_value=130, value=title_font_size)
+    notice_font_size = st.slider("公告橫幅字體大小 (px，獨立設定)", min_value=18, max_value=130, value=28)
 
 custom_theme = None
 if theme_name == CUSTOM_THEME_LABEL:
@@ -1278,11 +1241,11 @@ with col_b1:
         "底圖選擇",
         BG_IMAGE_OPTIONS,
         index=0,
-        help="1. 預設羽球場底圖讀取同層 arena_bg.jpg；2. 球拍 icon 使用球拍羽球圖示；3. 自行上傳可自選底圖；4. 不使用底圖僅套用色系。",
+        help="1. 預設羽球場底圖讀取同層 arena_bg.jpg；2. 球拍 icon 顯示預設球拍圖示；3. 自行上傳可自選底圖；4. 不使用底圖僅套用色系。",
     )
 with col_b2:
     badge_file = st.file_uploader(
-        "頂部圖示 / 隊徽 (選填，未上傳則使用預設羽球圖示)",
+        "頂部圖示 / 隊徽 (選填，上傳後可取代頂部圖示)",
         type=["png", "jpg", "jpeg", "webp", "svg"],
         key="badge_upload",
     )
@@ -1394,7 +1357,7 @@ kwargs_gen = dict(
     extra_days=extra_days_payload,
     notice_text=notice_text,
     notice_symbol=notice_symbol,
-    notice_font_size=title_font_size,
+    notice_font_size=notice_font_size,
     bg_image_choice=bg_image_choice,
     custom_bg_uri=custom_bg_uri,
     badge_data_uri=badge_data_uri,
@@ -1416,7 +1379,7 @@ kwargs_per = dict(
     data2_text="",
     notice_text=notice_text,
     notice_symbol=notice_symbol,
-    notice_font_size=title_font_size,
+    notice_font_size=notice_font_size,
     bg_image_choice=bg_image_choice,
     custom_bg_uri=custom_bg_uri,
     badge_data_uri=badge_data_uri,
@@ -1427,7 +1390,7 @@ kwargs_per = dict(
     mode="選手個人賽程",
 )
 
-notice_extra_px = (title_font_size + 56) if notice_text.strip() else 0
+notice_extra_px = (notice_font_size + 56) if notice_text.strip() else 0
 
 with col_prev1:
     st.subheader("🌐 【整體流程表】預覽")
